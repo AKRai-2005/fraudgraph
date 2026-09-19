@@ -1,0 +1,161 @@
+{
+  "case_id": "HHG-006",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.99,
+    "pattern": "undocumented",
+    "pattern_description": "Sub-threshold structuring: several online purchases executed within a single short window, each priced just below the $500 authorisation threshold so that no individual charge triggers step-up review, while the combined total ($1,906.07) far exceeds it. It affects one cardholder at a time and was found by scanning the card's own transaction window for amount clustering immediately beneath round thresholds rather than by any single transaction looking unusual.",
+    "affected_txn_ids": [
+      "3476602",
+      "3476633",
+      "3476665",
+      "3476682"
+    ],
+    "first_suspicious_txn_id": "3476602",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 1906.07,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3476682 on card C07297-K1: $482.12 online under product code C on 2016-11-21 20:30:00, scored 0.25 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682",
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 199 transactions, median $62.93, 95th percentile $414.69, maximum $1,104.00; online accounts for 3% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C07297-K1, before_ts=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "Sub threshold structuring: 4 online purchases within 30 minutes, each between $440 and $500 (total $1,906.07); amounts sit just under the $500 authorisation threshold.",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C07297-K1, center_ts=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "3476602",
+          "3476633",
+          "3476665",
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Cnp fraud: online accounts for only 2.5% of this card's history.",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C07297-K1, center_ts=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "3476602",
+          "3476633",
+          "3476665",
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2649 (confirmed_fraud, pattern undocumented, exposure $390.04) matches this alert on same typology (undocumented) and comparable exposure.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
+        "entity_ids": [
+          "CC-2649"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2985 (confirmed_fraud, pattern undocumented, exposure $381.40) matches this alert on same typology (undocumented) and comparable exposure.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
+        "entity_ids": [
+          "CC-2985"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-4086 (confirmed_fraud, pattern undocumented, exposure $1,871.13) matches this alert on same typology (undocumented) and comparable exposure.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
+        "entity_ids": [
+          "CC-4086"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-3841 (confirmed_fraud, pattern undocumented, exposure $1,899.30) matches this alert on same typology (undocumented) and comparable exposure.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
+        "entity_ids": [
+          "CC-3841"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2649",
+      "CC-2985",
+      "CC-4086",
+      "CC-3841",
+      "CC-3748",
+      "CC-4124"
+    ],
+    "summary": "Customer report on card C07297-K1: $482.12 online on 2016-11-21, scored 0.25 by the bank's model. 4 online purchases within 30 minutes, each between $440 and $500 (total $1,906.07); amounts sit just under the $500 authorisation threshold. Online accounts for only 2.5% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2649, CC-2985, CC-4086), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.99 on 3 independent signals, with exposure $1,906.07 across 4 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto), FILE_REPORT (L2).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $1,906.07 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: exposure $1,906.07 exceeds $1,000"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $1,906.07 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: exposure $1,906.07 exceeds $1,000"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a: fraud is confirmed by the cardholder and exposure $1,906.07 exceeds $1,000",
+    "narrative": "Customer C07297, holder of card C07297-K1. Between 2016-11-21 and 2016-11-21, 4 transaction(s) totalling $1,906.07 were identified as part of a single suspected fraud episode, beginning with transaction 3476602. The activity was conducted online under product code C, billed in region 264, from device profile 'Trident/7.0 | Windows 7 | ie 11.0 for desktop | 1920x1080'. 4 online purchases within 30 minutes, each between $440 and $500 (total $1,906.07); amounts sit just under the $500 authorisation threshold. The cardholder's established profile over 199 prior transactions shows a median amount of $62.93 and a maximum of $1,104.00. Closed investigation(s) CC-2649, CC-2985, CC-4086 record comparable activity previously confirmed by this institution. The institution's detection model scored the flagged transaction only 0.25; the suspicion arises from the relationship evidence, not from the model score. The institution's recommended disposition is: BLOCK_CARD, CREATE_CASE, FILE_REPORT. Actions requiring team-lead or fraud-manager approval are recorded as awaiting approval and have not been executed.",
+    "subjects": [
+      "C07297",
+      "C07297-K1",
+      "Trident/7.0 | Windows 7 | ie 11.0 for desktop | 1920x1080"
+    ],
+    "total_amount_usd": 1906.07,
+    "activity_dates": [
+      "2016-11-21",
+      "2016-11-21"
+    ]
+  },
+  "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
+  "tool_calls": 11,
+  "tokens": 0,
+  "latency_s": 0.16
+}

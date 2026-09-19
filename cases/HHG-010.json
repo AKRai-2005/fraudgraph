@@ -1,0 +1,164 @@
+{
+  "case_id": "HHG-010",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.991,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3506725"
+    ],
+    "first_suspicious_txn_id": "3506725",
+    "connected_card_ids": [],
+    "connected_device_profiles": [
+      "Windows | Windows 10 | edge 16.0 | 1366x768"
+    ],
+    "exposure_usd": 1000.03,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3506725 on card C10434-K1: $1,000.03 online under product code R on 2016-12-02 15:18:27, scored 0.90 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3506725)",
+        "entity_ids": [
+          "3506725",
+          "C10434-K1"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 33 transactions, median $68.98, 95th percentile $669.99, maximum $670.04; online accounts for 48% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C10434-K1, before_ts=2016-12-02 15:18:27)",
+        "entity_ids": [
+          "C10434-K1"
+        ]
+      },
+      {
+        "claim": "Cnp new device: online purchase from a device profile never seen on this card (11 devices previously seen), marked New for the account.",
+        "source": "graph",
+        "ref": "query:device_history_for_card(card_id=C10434-K1, device_profile=Windows | Windows 10 | edge 16.0 | 1366x768, before_ts=2016-12-02 15:18:27)",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "Cnp fraud: $1,000.03 exceeds the card's historical maximum of $670.04.",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C10434-K1, center_ts=2016-12-02 15:18:27)",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0873 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
+        "entity_ids": [
+          "CC-0873"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-1034 (cleared, pattern none, exposure $0.00) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | edge 16.0 | 1366x768'.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
+        "entity_ids": [
+          "CC-1034"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2720 (confirmed_fraud, pattern card_not_present_new_device, exposure $299.96) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | edge 16.0 | 1366x768'.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-2720"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-3219 (confirmed_fraud, pattern card_not_present_new_device, exposure $924.84) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | edge 16.0 | 1366x768'.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-3219"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0873",
+      "CC-1034",
+      "CC-2720",
+      "CC-3219",
+      "CC-3549",
+      "CC-3691"
+    ],
+    "summary": "Risk score on card C10434-K1: $1,000.03 online on 2016-12-02, scored 0.90 by the bank's model. Online purchase from a device profile never seen on this card (11 devices previously seen), marked new for the account. $1,000.03 exceeds the card's historical maximum of $670.04. Case memory returned 6 comparable closed investigation(s) (CC-0873, CC-1034, CC-2720), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.99 on 2 independent signals, with exposure $1,000.03 across 1 transaction(s). Recommended: BLOCK_CARD (L1), MONITOR_CARD (auto), CREATE_CASE (auto), FILE_REPORT (L2).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2 by analogy: assessed probability 0.99 with 2 independent signals supports blocking the card; exposure $1,000.03"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "monitor the card while reissue is arranged"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: assessed fraud probability 0.99 reaches the 0.30 case threshold"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: exposure $1,000.03 exceeds $1,000"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2 by analogy: assessed probability 0.99 with 2 independent signals supports blocking the card; exposure $1,000.03"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "monitor the card while reissue is arranged"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: assessed fraud probability 0.99 reaches the 0.30 case threshold"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: exposure $1,000.03 exceeds $1,000"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "3a: fraud is strongly suspected (probability 0.99) and exposure $1,000.03 exceeds $1,000",
+    "narrative": "Customer C10434, holder of card C10434-K1. Between 2016-12-02 and 2016-12-02, 1 transaction(s) totalling $1,000.03 were identified as part of a single suspected fraud episode, beginning with transaction 3506725. The activity was conducted online under product code R, billed in region 469, from device profile 'Windows | Windows 10 | edge 16.0 | 1366x768'. Online purchase from a device profile never seen on this card (11 devices previously seen), marked new for the account. The cardholder's established profile over 33 prior transactions shows a median amount of $68.98 and a maximum of $670.04. Closed investigation(s) CC-0873, CC-1034, CC-2720 record comparable activity previously confirmed by this institution. The institution's recommended disposition is: BLOCK_CARD, MONITOR_CARD, CREATE_CASE, FILE_REPORT. Actions requiring team-lead or fraud-manager approval are recorded as awaiting approval and have not been executed.",
+    "subjects": [
+      "C10434",
+      "C10434-K1",
+      "Windows | Windows 10 | edge 16.0 | 1366x768"
+    ],
+    "total_amount_usd": 1000.03,
+    "activity_dates": [
+      "2016-12-02",
+      "2016-12-02"
+    ]
+  },
+  "stop_reason": "Fraud probability 0.99 is at or above 0.85 with 2 independent pieces of evidence (policy 6).",
+  "tool_calls": 13,
+  "tokens": 0,
+  "latency_s": 0.24
+}

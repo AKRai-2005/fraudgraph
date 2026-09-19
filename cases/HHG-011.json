@@ -1,0 +1,127 @@
+{
+  "case_id": "HHG-011",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.723,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3583368"
+    ],
+    "first_suspicious_txn_id": "3583368",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 131.3,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3583368 on card C11923-K2: $131.30 online under product code C on 2016-12-29 03:27:44, scored 0.39 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583368)",
+        "entity_ids": [
+          "3583368",
+          "C11923-K2"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 10306 transactions, median $28.57, 95th percentile $107.80, maximum $486.52; online accounts for 100% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C11923-K2, before_ts=2016-12-29 03:27:44)",
+        "entity_ids": [
+          "C11923-K2"
+        ]
+      },
+      {
+        "claim": "Cnp new device: online purchase from a device profile never seen on this card (25 devices previously seen), marked New for the account.",
+        "source": "graph",
+        "ref": "query:device_history_for_card(card_id=C11923-K2, device_profile=SM-G610F Build/NRD90M | unknown | chrome 66.0 for android | unknown, before_ts=2016-12-29 03:27:44)",
+        "entity_ids": [
+          "3583368"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0031 (confirmed_fraud, pattern card_not_present_new_device, exposure $20.36) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-0031"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0290 (confirmed_fraud, pattern card_testing, exposure $144.56) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_testing, channel=online)",
+        "entity_ids": [
+          "CC-0290"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-1056 (confirmed_fraud, pattern card_not_present_new_device, exposure $1,557.95) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-1056"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2247 (confirmed_fraud, pattern card_testing, exposure $4,886.18) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_testing, channel=online)",
+        "entity_ids": [
+          "CC-2247"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0031",
+      "CC-0290",
+      "CC-1056",
+      "CC-2247",
+      "CC-2673",
+      "CC-2799"
+    ],
+    "summary": "Customer report on card C11923-K2: $131.30 online on 2016-12-29, scored 0.39 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-0031, CC-0290, CC-1056), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.72 on 3 independent signals, with exposure $131.30 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $131.30 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $131.30 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is strongly suspected but exposure $131.30 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
+  "tool_calls": 11,
+  "tokens": 0,
+  "latency_s": 0.46
+}

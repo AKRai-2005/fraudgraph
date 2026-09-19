@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fraud Investigation Console</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark"></span>
+    <div>
+      <h1>Fraud Investigation Console</h1>
+      <p class="sub">Graph-grounded agentic investigation &middot; IEEE-CIS / HHGOA</p>
+    </div>
+  </div>
+  <div class="status-strip" id="statusStrip"></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-view="overview" class="active">Overview</button>
+  <button data-view="queue">Investigation queue</button>
+  <button data-view="case">Case workspace</button>
+  <button data-view="memory">Case memory</button>
+  <button data-view="model">Model &amp; policy</button>
+</nav>
+
+<main>
+  <!-- ============================ OVERVIEW ============================ -->
+  <section id="view-overview" class="view active">
+    <div class="kpi-grid" id="kpis"></div>
+    <div class="two-col">
+      <div class="panel">
+        <h2>Assessed fraud probability</h2>
+        <p class="panel-hint">Distribution across investigated alerts. The agent's own
+          assessment, not the bank model's score.</p>
+        <div id="riskDist" class="dist"></div>
+      </div>
+      <div class="panel">
+        <h2>Verdicts and patterns</h2>
+        <div class="split" id="verdictSplit"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Recent agent activity</h2>
+      <p class="panel-hint">Live audit trail across all investigations, newest first.</p>
+      <div id="recentActivity" class="activity"></div>
+    </div>
+  </section>
+
+  <!-- ============================= QUEUE ============================== -->
+  <section id="view-queue" class="view">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Investigation queue</h2>
+        <div class="controls">
+          <input id="queueSearch" type="search" placeholder="Filter by case, card, customer&hellip;">
+          <select id="queueStatus">
+            <option value="">All statuses</option>
+            <option value="closed_fraud">Closed &ndash; fraud</option>
+            <option value="closed_legitimate">Closed &ndash; legitimate</option>
+            <option value="escalated">Escalated</option>
+            <option value="open">Open</option>
+          </select>
+          <select id="queueVerdict">
+            <option value="">All verdicts</option>
+            <option value="fraud">Fraud</option>
+            <option value="legitimate">Legitimate</option>
+            <option value="uncertain">Uncertain</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="queueApproval"> Awaiting approval</label>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="queueTable">
+          <thead><tr>
+            <th data-sort="case_id">Case</th>
+            <th data-sort="trigger_type">Trigger</th>
+            <th data-sort="card_id">Card</th>
+            <th data-sort="bank_risk_score">Bank score</th>
+            <th data-sort="fraud_probability">Agent p(fraud)</th>
+            <th data-sort="confidence">Confidence</th>
+            <th data-sort="verdict">Verdict</th>
+            <th data-sort="pattern">Pattern</th>
+            <th data-sort="exposure_usd">Exposure</th>
+            <th data-sort="next_action">Next best action</th>
+            <th>Approval</th>
+            <th data-sort="last_updated">Updated</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="panel-foot">
+        <div class="adhoc">
+          <label>Open an investigation on any transaction</label>
+          <input id="adhocTxn" placeholder="TransactionID, e.g. 3478561">
+          <button id="adhocBtn" class="btn">Investigate</button>
+          <span id="adhocMsg" class="muted"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== WORKSPACE ============================ -->
+  <section id="view-case" class="view">
+    <div class="case-picker">
+      <select id="casePicker"></select>
+      <button id="rerunBtn" class="btn">Re-run investigation</button>
+      <span id="caseMsg" class="muted"></span>
+    </div>
+    <div id="caseBody" class="case-body">
+      <div class="empty">Select a case from the queue.</div>
+    </div>
+  </section>
+
+  <!-- ============================= MEMORY ============================= -->
+  <section id="view-memory" class="view">
+    <div id="memoryBody"></div>
+  </section>
+
+  <!-- ========================== MODEL/POLICY ========================== -->
+  <section id="view-model" class="view">
+    <div id="modelBody"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

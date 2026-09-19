@@ -1,0 +1,189 @@
+/* Fraud investigation knowledge graph -- schema
+ *
+ * Derived from the shipped data, not assumed:
+ *   - a Card is (customer_id, card4 network, card6 type); see docs/DATA_NOTES.md
+ *   - a DeviceProfile is DeviceInfo | OS | browser | screen, per the README
+ *   - channel is in_person for ProductCD 'W' and online otherwise (verified: 0 violations)
+ *
+ * Two case vertex types are kept deliberately separate:
+ *   ClosedCase  -- the 5,565 investigations shipped with the dataset (read-only truth)
+ *   AgentCase   -- investigations this agent closed (its own memory)
+ * so an answer file can never confuse historical evidence with its own conclusions.
+ */
+
+CREATE VERTEX Customer (
+  PRIMARY_ID customer_id STRING,
+  n_cards INT,
+  n_txns INT,
+  first_ts DATETIME,
+  last_ts DATETIME,
+  total_amt DOUBLE,
+  home_region STRING,
+  home_country STRING
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX Card (
+  PRIMARY_ID card_id STRING,
+  customer_id STRING,
+  card1 INT,
+  network STRING,
+  card_type STRING,
+  n_txns INT,
+  first_ts DATETIME,
+  last_ts DATETIME,
+  total_amt DOUBLE,
+  median_amt DOUBLE,
+  max_amt DOUBLE,
+  n_online INT,
+  n_in_person INT,
+  mean_risk DOUBLE
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX Transaction (
+  PRIMARY_ID txn_id STRING,
+  card_id STRING,
+  customer_id STRING,
+  ts DATETIME,
+  amount DOUBLE,
+  product_cd STRING,
+  channel STRING,
+  risk_score DOUBLE,
+  addr1 STRING,
+  addr2 STRING,
+  dist1 DOUBLE,
+  p_email STRING,
+  r_email STRING,
+  device_profile STRING,
+  device_new STRING,
+  proxy_flag STRING,
+  match_status STRING,
+  seq_in_card INT
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX DeviceProfile (
+  PRIMARY_ID device_profile STRING,
+  device_type STRING,
+  device_info STRING,
+  os STRING,
+  browser STRING,
+  screen STRING,
+  proxy_flags STRING,
+  n_txns INT,
+  n_cards INT,
+  n_customers INT,
+  n_new_for_account INT,
+  first_ts DATETIME,
+  last_ts DATETIME,
+  total_amt DOUBLE
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX BillingRegion (
+  PRIMARY_ID region_id STRING,
+  country STRING,
+  n_txns INT,
+  n_cards INT,
+  n_customers INT
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX EmailDomain (
+  PRIMARY_ID domain STRING,
+  n_txns INT
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX ClosedCase (
+  PRIMARY_ID case_id STRING,
+  customer_id STRING,
+  card_id STRING,
+  opened_at DATETIME,
+  closed_at DATETIME,
+  outcome STRING,
+  pattern STRING,
+  first_fraud_txn_id STRING,
+  n_txns INT,
+  exposure_usd DOUBLE,
+  actions_taken STRING,
+  report_filed STRING,
+  analyst_notes STRING
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX AgentCase (
+  PRIMARY_ID graph_case_id STRING,
+  case_id STRING,
+  status STRING,
+  verdict STRING,
+  fraud_probability DOUBLE,
+  pattern STRING,
+  pattern_description STRING,
+  exposure_usd DOUBLE,
+  summary STRING,
+  stop_reason STRING,
+  trigger_type STRING,
+  opened_at STRING,
+  closed_at STRING,
+  card_id STRING,
+  customer_id STRING,
+  first_suspicious_txn_id STRING,
+  actions_initial STRING,
+  actions_final STRING,
+  report_filed BOOL,
+  n_affected_txns INT,
+  source STRING
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX CaseEvidence (
+  PRIMARY_ID evidence_id STRING,
+  claim STRING,
+  ev_source STRING,
+  ref STRING,
+  entity_ids STRING
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX FraudPattern (
+  PRIMARY_ID pattern_id STRING,
+  name STRING,
+  description STRING,
+  documented BOOL,
+  policy_rules STRING
+) WITH primary_id_as_attribute="true";
+
+CREATE VERTEX PolicyRule (
+  PRIMARY_ID rule_id STRING,
+  summary STRING,
+  rule_text STRING
+) WITH primary_id_as_attribute="true";
+
+/* ---------------------------------------------------------------- edges */
+
+CREATE DIRECTED EDGE OWNS (FROM Customer, TO Card) WITH REVERSE_EDGE="OWNED_BY";
+CREATE DIRECTED EDGE MADE (FROM Card, TO Transaction, ts DATETIME, amount DOUBLE)
+  WITH REVERSE_EDGE="MADE_BY";
+CREATE DIRECTED EDGE FROM_DEVICE (FROM Transaction, TO DeviceProfile, device_new STRING, proxy_flag STRING)
+  WITH REVERSE_EDGE="DEVICE_USED_BY";
+CREATE DIRECTED EDGE BILLED_IN (FROM Transaction, TO BillingRegion)
+  WITH REVERSE_EDGE="REGION_OF";
+CREATE DIRECTED EDGE PURCHASER_EMAIL (FROM Transaction, TO EmailDomain)
+  WITH REVERSE_EDGE="PURCHASER_EMAIL_OF";
+CREATE DIRECTED EDGE RECIPIENT_EMAIL (FROM Transaction, TO EmailDomain)
+  WITH REVERSE_EDGE="RECIPIENT_EMAIL_OF";
+CREATE DIRECTED EDGE NEXT_TXN (FROM Transaction, TO Transaction, gap_s DOUBLE)
+  WITH REVERSE_EDGE="PREV_TXN";
+
+CREATE DIRECTED EDGE INVOLVES (FROM ClosedCase, TO Transaction) WITH REVERSE_EDGE="INVOLVED_IN";
+CREATE DIRECTED EDGE ON_CARD (FROM ClosedCase, TO Card) WITH REVERSE_EDGE="CASE_ON";
+CREATE DIRECTED EDGE CONNECTED_TO (FROM ClosedCase, TO Card) WITH REVERSE_EDGE="CONNECTED_FROM";
+
+CREATE DIRECTED EDGE CASE_INVESTIGATES (FROM AgentCase, TO Transaction)
+  WITH REVERSE_EDGE="INVESTIGATED_BY";
+CREATE DIRECTED EDGE CASE_ON_CARD (FROM AgentCase, TO Card) WITH REVERSE_EDGE="AGENT_CASE_ON";
+CREATE DIRECTED EDGE CASE_CONNECTED_TO (FROM AgentCase, TO Card)
+  WITH REVERSE_EDGE="AGENT_CASE_CONNECTED_FROM";
+CREATE DIRECTED EDGE CASE_CONTAINS_EVIDENCE (FROM AgentCase, TO CaseEvidence)
+  WITH REVERSE_EDGE="EVIDENCE_OF";
+CREATE DIRECTED EDGE CASE_MATCHES_PATTERN (FROM AgentCase, TO FraudPattern)
+  WITH REVERSE_EDGE="PATTERN_OF_CASE";
+CREATE DIRECTED EDGE CASE_FROM_DEVICE (FROM AgentCase, TO DeviceProfile)
+  WITH REVERSE_EDGE="DEVICE_OF_CASE";
+CREATE DIRECTED EDGE CASE_CITES_PRIOR (FROM AgentCase, TO ClosedCase)
+  WITH REVERSE_EDGE="CITED_BY";
+CREATE DIRECTED EDGE CASE_APPLIES_RULE (FROM AgentCase, TO PolicyRule)
+  WITH REVERSE_EDGE="RULE_APPLIED_IN";

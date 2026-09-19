@@ -1,0 +1,276 @@
+/* Installed GSQL queries implementing the catalogue in fraudgraph/graph/queries.py.
+ *
+ * Each one is a real graph traversal, not a table scan: the investigation walks
+ * Card -> MADE -> Transaction -> FROM_DEVICE -> DeviceProfile -> DEVICE_USED_BY
+ * -> Transaction -> MADE_BY -> Card, and Transaction -> INVOLVED_IN -> ClosedCase.
+ */
+
+/* ---------------------------------------------------------------- txn_detail */
+CREATE QUERY txn_detail(STRING txn_id) FOR GRAPH FraudInvestigation {
+  SetAccum<STRING> @@prior_cases;
+  Start = {Transaction.*};
+  T = SELECT t FROM Start:t WHERE t.txn_id == txn_id;
+  C = SELECT c FROM T:t -(INVOLVED_IN:e)- ClosedCase:c
+      ACCUM @@prior_cases += c.case_id;
+  PRINT T AS txn;
+  PRINT @@prior_cases AS prior_closed_cases;
+}
+
+/* ---------------------------------------------------------------- card_window
+ * Transactions on one card inside a window around a point of interest.
+ */
+CREATE QUERY card_window(STRING card_id, DATETIME center_ts,
+                         DOUBLE hours_before = 72, DOUBLE hours_after = 72,
+                         INT lim = 500) FOR GRAPH FraudInvestigation {
+  DATETIME lo, hi;
+  lo = datetime_add(center_ts, INTERVAL (to_int(hours_before * 3600)) SECOND * -1);
+  hi = datetime_add(center_ts, INTERVAL (to_int(hours_after * 3600)) SECOND);
+  Start = {Card.*};
+  C = SELECT c FROM Start:c WHERE c.card_id == card_id;
+  T = SELECT t FROM C:c -(MADE:e)- Transaction:t
+      WHERE t.ts >= lo AND t.ts <= hi
+      ORDER BY t.ts ASC
+      LIMIT lim;
+  PRINT T AS transactions;
+}
+
+/* --------------------------------------------------------------- card_profile
+ * The cardholder's established behaviour strictly before a timestamp.
+ */
+CREATE QUERY card_profile(STRING card_id, DATETIME before_ts, INT lookback_days = 365)
+  FOR GRAPH FraudInvestigation {
+  SumAccum<INT> @@n;
+  SumAccum<DOUBLE> @@total;
+  MaxAccum<DOUBLE> @@max_amt;
+  MinAccum<DOUBLE> @@min_amt;
+  SumAccum<INT> @@n_online, @@n_in_person;
+  MapAccum<STRING, SumAccum<INT>> @@by_region, @@by_product, @@by_device, @@by_email;
+  ListAccum<DOUBLE> @@amounts;
+  SumAccum<DOUBLE> @@risk_total;
+  MinAccum<DATETIME> @@first_ts;
+  MaxAccum<DATETIME> @@last_ts;
+  DATETIME lo;
+  lo = datetime_add(before_ts, INTERVAL lookback_days DAY * -1);
+
+  Start = {Card.*};
+  C = SELECT c FROM Start:c WHERE c.card_id == card_id;
+  T = SELECT t FROM C:c -(MADE:e)- Transaction:t
+      WHERE t.ts < before_ts AND t.ts >= lo
+      ACCUM
+        @@n += 1,
+        @@total += t.amount,
+        @@max_amt += t.amount,
+        @@min_amt += t.amount,
+        @@amounts += t.amount,
+        @@risk_total += t.risk_score,
+        @@first_ts += t.ts,
+        @@last_ts += t.ts,
+        CASE WHEN t.channel == "online" THEN @@n_online += 1
+             ELSE @@n_in_person += 1 END,
+        CASE WHEN t.addr1 != "" THEN @@by_region += (t.addr1 -> 1) END,
+        @@by_product += (t.product_cd -> 1),
+        CASE WHEN t.device_profile != "" THEN @@by_device += (t.device_profile -> 1) END,
+        CASE WHEN t.p_email != "" THEN @@by_email += (t.p_email -> 1) END;
+
+  PRINT @@n AS n_txns, @@total AS total_amt, @@max_amt AS max_amt, @@min_amt AS min_amt;
+  PRINT @@amounts AS amounts;
+  PRINT @@n_online AS n_online, @@n_in_person AS n_in_person;
+  PRINT @@by_region AS regions, @@by_product AS product_codes;
+  PRINT @@by_device AS device_profiles, @@by_email AS purchaser_email_domains;
+  PRINT @@risk_total AS risk_total, @@first_ts AS first_ts, @@last_ts AS last_ts;
+}
+
+/* -------------------------------------------------------------- card_timeline */
+CREATE QUERY card_timeline(STRING card_id, DATETIME from_ts, DATETIME to_ts, INT lim = 1000)
+  FOR GRAPH FraudInvestigation {
+  Start = {Card.*};
+  C = SELECT c FROM Start:c WHERE c.card_id == card_id;
+  T = SELECT t FROM C:c -(MADE:e)- Transaction:t
+      WHERE t.ts >= from_ts AND t.ts <= to_ts
+      ORDER BY t.ts ASC LIMIT lim;
+  PRINT T AS transactions;
+}
+
+/* ------------------------------------------------------------- customer_cards */
+CREATE QUERY customer_cards(STRING customer_id) FOR GRAPH FraudInvestigation {
+  Start = {Customer.*};
+  U = SELECT u FROM Start:u WHERE u.customer_id == customer_id;
+  K = SELECT k FROM U:u -(OWNS:e)- Card:k;
+  PRINT K AS cards;
+}
+
+/* ------------------------------------------------------------ device_neighbors
+ * The shared-origin pivot: from a device profile to every card that used it.
+ */
+CREATE QUERY device_neighbors(STRING device_profile, DATETIME from_ts, DATETIME to_ts,
+                              INT lim = 200) FOR GRAPH FraudInvestigation {
+  MapAccum<STRING, SumAccum<INT>> @@card_txns;
+  MapAccum<STRING, SumAccum<DOUBLE>> @@card_amt;
+  MapAccum<STRING, SumAccum<INT>> @@card_new;
+  SetAccum<STRING> @@customers, @@proxy_flags;
+  SumAccum<INT> @@n_txns;
+  SumAccum<DOUBLE> @@total_amt;
+
+  Start = {DeviceProfile.*};
+  D = SELECT d FROM Start:d WHERE d.device_profile == device_profile;
+  T = SELECT t FROM D:d -(DEVICE_USED_BY:e)- Transaction:t
+      WHERE t.ts >= from_ts AND t.ts <= to_ts
+      ACCUM
+        @@n_txns += 1,
+        @@total_amt += t.amount,
+        @@card_txns += (t.card_id -> 1),
+        @@card_amt += (t.card_id -> t.amount),
+        @@customers += t.customer_id,
+        CASE WHEN t.device_new == "New" THEN @@card_new += (t.card_id -> 1) END,
+        CASE WHEN t.proxy_flag != "" THEN @@proxy_flags += t.proxy_flag END;
+
+  PRINT @@card_txns AS card_txns, @@card_amt AS card_amt, @@card_new AS card_new;
+  PRINT @@customers AS customers, @@proxy_flags AS proxy_flags;
+  PRINT @@n_txns AS n_txns, @@total_amt AS total_amount;
+  PRINT D AS device;
+}
+
+/* ------------------------------------------------------------ region_neighbors */
+CREATE QUERY region_neighbors(STRING region_id, DATETIME from_ts, DATETIME to_ts,
+                              INT lim = 200) FOR GRAPH FraudInvestigation {
+  MapAccum<STRING, SumAccum<INT>> @@card_txns;
+  MapAccum<STRING, SumAccum<DOUBLE>> @@card_amt;
+  SetAccum<STRING> @@customers;
+  SumAccum<INT> @@n_txns;
+
+  Start = {BillingRegion.*};
+  R = SELECT r FROM Start:r WHERE r.region_id == region_id;
+  T = SELECT t FROM R:r -(REGION_OF:e)- Transaction:t
+      WHERE t.ts >= from_ts AND t.ts <= to_ts
+      ACCUM @@n_txns += 1, @@card_txns += (t.card_id -> 1),
+            @@card_amt += (t.card_id -> t.amount), @@customers += t.customer_id;
+
+  PRINT @@card_txns AS card_txns, @@card_amt AS card_amt;
+  PRINT @@customers AS customers, @@n_txns AS n_txns;
+  PRINT R AS region;
+}
+
+/* ------------------------------------------------------------- email_neighbors */
+CREATE QUERY email_neighbors(STRING domain, STRING role, DATETIME from_ts, DATETIME to_ts,
+                             INT lim = 200) FOR GRAPH FraudInvestigation {
+  MapAccum<STRING, SumAccum<INT>> @@card_txns;
+  MapAccum<STRING, SumAccum<DOUBLE>> @@card_amt;
+  SumAccum<INT> @@n_txns;
+  Start = {EmailDomain.*};
+  E = SELECT e FROM Start:e WHERE e.domain == domain;
+  Tr = SELECT t FROM E:e -(RECIPIENT_EMAIL_OF:x)- Transaction:t
+       WHERE role == "recipient" AND t.ts >= from_ts AND t.ts <= to_ts
+       ACCUM @@n_txns += 1, @@card_txns += (t.card_id -> 1), @@card_amt += (t.card_id -> t.amount);
+  Tp = SELECT t FROM E:e -(PURCHASER_EMAIL_OF:x)- Transaction:t
+       WHERE role != "recipient" AND t.ts >= from_ts AND t.ts <= to_ts
+       ACCUM @@n_txns += 1, @@card_txns += (t.card_id -> 1), @@card_amt += (t.card_id -> t.amount);
+  PRINT @@card_txns AS card_txns, @@card_amt AS card_amt, @@n_txns AS n_txns;
+}
+
+/* ------------------------------------------------------ region_history_for_card
+ * The out-of-region test: has this card ever been billed in this region before?
+ */
+CREATE QUERY region_history_for_card(STRING card_id, STRING region_id, DATETIME before_ts)
+  FOR GRAPH FraudInvestigation {
+  SumAccum<INT> @@in_region, @@total;
+  SetAccum<STRING> @@regions;
+  MapAccum<STRING, SumAccum<INT>> @@by_region;
+  MinAccum<DATETIME> @@first_in_region;
+
+  Start = {Card.*};
+  C = SELECT c FROM Start:c WHERE c.card_id == card_id;
+  T = SELECT t FROM C:c -(MADE:e)- Transaction:t WHERE t.ts < before_ts
+      ACCUM
+        @@total += 1,
+        CASE WHEN t.addr1 != "" THEN @@regions += t.addr1, @@by_region += (t.addr1 -> 1) END,
+        CASE WHEN t.addr1 == region_id THEN @@in_region += 1, @@first_in_region += t.ts END;
+
+  PRINT @@in_region AS prior_txns_in_region, @@total AS prior_txns_total;
+  PRINT @@regions AS distinct_prior_regions, @@by_region AS by_region;
+  PRINT @@first_in_region AS first_seen_in_region;
+}
+
+/* ------------------------------------------------------ device_history_for_card
+ * The new-device test: has this card used this device profile before?
+ */
+CREATE QUERY device_history_for_card(STRING card_id, STRING device_profile, DATETIME before_ts)
+  FOR GRAPH FraudInvestigation {
+  SumAccum<INT> @@on_device, @@online_txns;
+  SetAccum<STRING> @@devices;
+  MinAccum<DATETIME> @@first_on_device;
+
+  Start = {Card.*};
+  C = SELECT c FROM Start:c WHERE c.card_id == card_id;
+  T = SELECT t FROM C:c -(MADE:e)- Transaction:t WHERE t.ts < before_ts
+      ACCUM
+        CASE WHEN t.channel == "online" THEN @@online_txns += 1 END,
+        CASE WHEN t.device_profile != "" THEN @@devices += t.device_profile END,
+        CASE WHEN t.device_profile == device_profile
+             THEN @@on_device += 1, @@first_on_device += t.ts END;
+
+  PRINT @@on_device AS prior_txns_on_device, @@online_txns AS prior_online_txns;
+  PRINT @@devices AS distinct_prior_devices, @@first_on_device AS first_seen_on_device;
+}
+
+/* ------------------------------------------------------------- case memory */
+CREATE QUERY closed_cases_for_card(STRING card_id, STRING as_of) FOR GRAPH FraudInvestigation {
+  Start = {Card.*};
+  C = SELECT c FROM Start:c WHERE c.card_id == card_id;
+  Direct = SELECT cc FROM C:c -(CASE_ON:e)- ClosedCase:cc;
+  Conn = SELECT cc FROM C:c -(CONNECTED_FROM:e)- ClosedCase:cc;
+  PRINT Direct AS direct;
+  PRINT Conn AS as_connected_card;
+}
+
+CREATE QUERY closed_cases_for_customer(STRING customer_id, STRING as_of)
+  FOR GRAPH FraudInvestigation {
+  Start = {ClosedCase.*};
+  CC = SELECT cc FROM Start:cc WHERE cc.customer_id == customer_id;
+  PRINT CC AS cases;
+}
+
+CREATE QUERY closed_cases_for_device(STRING device_profile, STRING as_of)
+  FOR GRAPH FraudInvestigation {
+  Start = {DeviceProfile.*};
+  D = SELECT d FROM Start:d WHERE d.device_profile == device_profile;
+  T = SELECT t FROM D:d -(DEVICE_USED_BY:e)- Transaction:t;
+  CC = SELECT cc FROM T:t -(INVOLVED_IN:e)- ClosedCase:cc;
+  PRINT CC AS cases;
+}
+
+CREATE QUERY closed_cases_for_region(STRING region_id) FOR GRAPH FraudInvestigation {
+  Start = {BillingRegion.*};
+  R = SELECT r FROM Start:r WHERE r.region_id == region_id;
+  T = SELECT t FROM R:r -(REGION_OF:e)- Transaction:t;
+  CC = SELECT cc FROM T:t -(INVOLVED_IN:e)- ClosedCase:cc LIMIT 50;
+  PRINT CC AS cases;
+}
+
+CREATE QUERY similar_closed_cases(STRING pattern, STRING channel, DOUBLE amount,
+                                  INT n_txns, INT lim = 8) FOR GRAPH FraudInvestigation {
+  Start = {ClosedCase.*};
+  CC = SELECT cc FROM Start:cc
+       WHERE (pattern == "" OR cc.pattern == pattern)
+       ORDER BY abs(cc.exposure_usd - amount) ASC
+       LIMIT lim;
+  PRINT CC AS cases;
+}
+
+/* ------------------------------------------------------------- agent cases */
+CREATE QUERY read_cases(STRING case_id, INT lim = 100) FOR GRAPH FraudInvestigation {
+  Start = {AgentCase.*};
+  A = SELECT a FROM Start:a WHERE case_id == "" OR a.case_id == case_id LIMIT lim;
+  PRINT A AS cases;
+}
+
+CREATE QUERY graph_health() FOR GRAPH FraudInvestigation {
+  SumAccum<INT> @@n_txn, @@n_card, @@n_cust, @@n_dev, @@n_closed, @@n_agent;
+  T = SELECT t FROM Transaction:t ACCUM @@n_txn += 1;
+  C = SELECT c FROM Card:c ACCUM @@n_card += 1;
+  U = SELECT u FROM Customer:u ACCUM @@n_cust += 1;
+  D = SELECT d FROM DeviceProfile:d ACCUM @@n_dev += 1;
+  CC = SELECT cc FROM ClosedCase:cc ACCUM @@n_closed += 1;
+  A = SELECT a FROM AgentCase:a ACCUM @@n_agent += 1;
+  PRINT @@n_txn AS transactions, @@n_card AS cards, @@n_cust AS customers;
+  PRINT @@n_dev AS device_profiles, @@n_closed AS closed_cases, @@n_agent AS agent_cases;
+}

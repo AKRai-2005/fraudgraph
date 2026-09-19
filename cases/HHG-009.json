@@ -1,0 +1,112 @@
+{
+  "case_id": "HHG-009",
+  "case": {
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.628,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3581141"
+    ],
+    "first_suspicious_txn_id": "3581141",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 30.02,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3581141 on card C08299-K1: $30.02 online under product code S on 2016-12-28 12:10:53, scored 0.28 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141",
+          "C08299-K1"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 46 transactions, median $49.97, 95th percentile $235.42, maximum $343.94; online accounts for 87% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C08299-K1, before_ts=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1"
+        ]
+      },
+      {
+        "claim": "Consistent with history: $30.02 is at or below the card's 95th-percentile amount ($235.42); online is 87% of this card's history; product code S is 85% of this card's history; device profile already seen 5 times on this card.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C08299-K1, before_ts=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1"
+        ]
+      },
+      {
+        "claim": "Remaining uncertainty: the case rests on a single signal (the cardholder states they did not make this transaction); policy R1 applies; the cardholder's denial is the only evidence of fraud; nothing in the card's graph neighbourhood corroborates it.",
+        "source": "graph",
+        "ref": "risk:uncertainty_assessment",
+        "entity_ids": [
+          "C08299-K1"
+        ]
+      }
+    ],
+    "similar_prior_cases": [],
+    "summary": "Customer report on card C08299-K1: $30.02 online on 2016-12-28, scored 0.28 by the bank's model. $30.02 is at or below the card's 95th-percentile amount ($235.42); online is 87% of this card's history; product code s is 85% of this card's history; device profile already seen 5 times on this card. Verdict uncertain at probability 0.63 with confidence 0.63; the evidence does not yet settle the question. Recommended: STEP_UP_AUTH (auto), VERIFY_WITH_CUSTOMER (auto), CREATE_CASE (auto).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 7,
+      "assumed_response": "Taken from the trigger, not assumed: the cardholder has already stated in writing that they did not make this purchase."
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R1: require step-up authentication on further activity while verification is outstanding"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R1: assessed probability 0.41 rests on 1 signal; verify before any block"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "final": [
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R1: require step-up authentication on further activity while verification is outstanding"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R1: assessed probability 0.63 rests on 1 signal; verify before any block"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "what_changed": "The simulated customer validation response (Taken from the trigger, not assumed: the cardholder has already stated in writing that they did not make this purchase.) moved the assessed probability from 0.41 to 0.63."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is strongly suspected but exposure $30.02 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
+  "tool_calls": 10,
+  "tokens": 0,
+  "latency_s": 0.14
+}

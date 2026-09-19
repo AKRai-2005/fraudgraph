@@ -1,0 +1,166 @@
+# Agentic Fraud Investigation on TigerGraph
+
+An investigation agent for the TigerGraph × Hacker House Goa challenge (IEEE-CIS
+edition). It takes a fraud alert, investigates it against a knowledge graph of
+590,742 transactions, decides what kind of fraud it is — if any — how far it
+goes, and what the bank should do next under the challenge's Fraud Policy v1.0.
+
+It is built around one conviction, which the dataset README states and the data
+confirms: **a risk score is a reason to look, never a verdict.** Half the exam
+cases are legitimate and most of them look suspicious, so the hard part is not
+detecting anomalies — it is refusing to act on the ones that do not hold up.
+
+---
+
+## What it does
+
+```
+alert ──▶ baseline retrieval ──▶ targeted retrieval ──▶ 9 pattern detectors
+                                        │                       │
+                                 (LLM may add queries)           ▼
+                                                        risk + uncertainty
+                                                                │
+   case memory ◀── write case ◀── policy engine ◀── evidence request ◀──┘
+   (TigerGraph)                   (R1..R10, routes)   (simulated, stated)
+```
+
+* **Graph-grounded.** Every claim in an answer file carries the graph query that
+  produced it and the entity ids it rests on. `query:device_neighbors(...)` in
+  an answer is a query that actually ran; a test asserts it.
+* **Deterministic where it matters.** The verdict, the probability, the pattern,
+  the exposure, the actions, the approval routes and the SAR decision are
+  computed by code. The LLM proposes extra retrieval and rewrites prose, and its
+  rewrites are rejected if they introduce an id, amount or date that is not
+  already in the retrieved evidence.
+* **Honest about what it did not do.** Nothing reaches a real financial system;
+  `L1`/`L2` actions are recorded as awaiting approval and never executed by the
+  agent. Customer replies are simulated under a published rule and labelled as
+  such. `written_to_graph` is set from what the graph accepted, never assumed.
+
+## Two fraud typologies the challenge does not document
+
+The nine `undocumented` closed cases are **two** distinct patterns, read out of
+their analyst notes and implemented as detectors that key on behaviour, not on
+case ids:
+
+1. **Coordinated shared-device ring.** One device fingerprint — always behind an
+   anonymising proxy, marked `New` for every account it touches — spread across
+   many unrelated cards. In this dataset exactly one profile out of 9,706 meets
+   that test, and it carries 52 cards.
+2. **Sub-threshold structuring.** Several online purchases inside one short
+   window, each priced just under a round authorisation threshold, totalling far
+   more than it.
+
+Both are found by graph traversal from the flagged transaction. Details and the
+evidence in `docs/DATA_NOTES.md`.
+
+---
+
+## Quick start
+
+```bash
+pip install -r requirements.txt
+```
+
+Point the code at the dataset (it already defaults to `data/raw/`):
+
+```bash
+cp .env.example .env     # then fill in credentials, all optional to start
+```
+
+Build the graph, end to end:
+
+```bash
+python -m fraudgraph.ingest.prepare      # 708 MB CSV -> parquet cache
+python -m fraudgraph.ingest.entities     # derive cards, devices, regions; validate
+python -m fraudgraph.ingest.tg_export    # write load-ready CSVs for TigerGraph
+```
+
+Fit the risk model on the closed cases and run the exam:
+
+```bash
+python -m fraudgraph.analysis.calibrate  # fit + cross-validate, writes a model card
+python -m fraudgraph.benchmark.run       # writes cases/HHG-0NN.json
+python -m fraudgraph.benchmark.validate  # checks all 20 against the Answer Format
+```
+
+Open the console:
+
+```bash
+python run_api.py        # http://127.0.0.1:8077
+```
+
+Run the tests:
+
+```bash
+python -m pytest -q
+```
+
+Everything above works with **no credentials at all** — the local mirror serves
+the same query catalogue and the narrative falls back to templates. Credentials
+turn on the two mandatory integrations, below.
+
+## Connecting TigerGraph
+
+Create a free workspace at <https://savanna.tgcloud.io> (or install Community
+Edition), then put the connection details in `.env`:
+
+```
+TG_HOST=https://<workspace>.i.tgcloud.io
+TG_USERNAME=tigergraph
+TG_PASSWORD=<your password>
+TG_GRAPH=FraudInvestigation
+```
+
+```bash
+python -m fraudgraph.ingest.tg_load --schema
+python -m fraudgraph.ingest.tg_load --job
+python -m fraudgraph.ingest.tg_load --data      # ~90 MB of CSV
+python -m fraudgraph.ingest.tg_load --queries
+python -m fraudgraph.ingest.tg_load --check
+```
+
+Then `FG_GRAPH_BACKEND=tigergraph` makes it the system of record. The console's
+status strip always shows which backend answered, and the answer files record
+it per evidence item.
+
+## Connecting the LLM
+
+Gemini's free tier is enough:
+
+```
+FG_LLM_PROVIDER=gemini
+FG_LLM_MODEL=gemini-2.0-flash
+GEMINI_API_KEY=<key from https://aistudio.google.com/apikey>
+```
+
+With no key the system runs on deterministic templates and reports
+`tokens: 0` honestly.
+
+---
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `src/fraudgraph/ingest/` | CSV → parquet → derived entities → TigerGraph load |
+| `src/fraudgraph/graph/` | query catalogue, GSQL, TigerGraph backend, local mirror |
+| `src/fraudgraph/analysis/` | features, 9 detectors, risk model, calibration |
+| `src/fraudgraph/policy/` | Fraud Policy v1.0 as data, the engine, mock actions |
+| `src/fraudgraph/agent/` | orchestrator, evidence requests, narrative, LLM |
+| `src/fraudgraph/memory/` | case retrieval and persistence |
+| `src/fraudgraph/api/` | FastAPI service behind the console |
+| `src/fraudgraph/benchmark/` | the 20-case runner and the format validator |
+| `frontend/` | the analyst console (vanilla JS, no CDN, works offline) |
+| `cases/` | the deliverable: 20 answer files |
+| `docs/` | data notes, architecture, risk model, limitations |
+
+## Documentation
+
+* [`docs/DATA_NOTES.md`](docs/DATA_NOTES.md) — what was verified in the data,
+  including how the `-K1` card ids were recovered
+* [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — components and the flow
+* [`docs/RISK_MODEL.md`](docs/RISK_MODEL.md) — the model card, and the two
+  places where fitting the closed cases naively goes badly wrong
+* [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — what this does not do
+* [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — deliverable checklist

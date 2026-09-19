@@ -1,0 +1,126 @@
+{
+  "case_id": "HHG-012",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.944,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3553342"
+    ],
+    "first_suspicious_txn_id": "3553342",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 30.91,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3553342 on card C05876-K2: $30.91 in-person under product code W on 2016-12-18 04:00:31, scored 0.55 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3553342)",
+        "entity_ids": [
+          "3553342",
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 910 transactions, median $49.08, 95th percentile $226.05, maximum $2,681.01; in_person accounts for 93% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C05876-K2, before_ts=2016-12-18 04:00:31)",
+        "entity_ids": [
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "Consistent with history: $30.91 is at or below the card's 95th-percentile amount ($226.05); in_person is 93% of this card's history; 21 prior transactions in billing region 494; product code W is 93% of this card's history.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C05876-K2, before_ts=2016-12-18 04:00:31)",
+        "entity_ids": [
+          "C05876-K2"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0003 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=in_person)",
+        "entity_ids": [
+          "CC-0003"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2370 (confirmed_fraud, pattern card_not_present_fraud, exposure $149.99) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=in_person)",
+        "entity_ids": [
+          "CC-2370"
+        ]
+      },
+      {
+        "claim": "Remaining uncertainty: the case rests on a single signal (prior confirmed fraud on this card); policy R1 applies.",
+        "source": "graph",
+        "ref": "risk:uncertainty_assessment",
+        "entity_ids": [
+          "C05876-K2"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0003",
+      "CC-2370"
+    ],
+    "summary": "Risk score on card C05876-K2: $30.91 in-person on 2016-12-18, scored 0.55 by the bank's model. $30.91 is at or below the card's 95th-percentile amount ($226.05); in_person is 93% of this card's history; 21 prior transactions in billing region 494; product code w is 93% of this card's history. Case memory returned 2 comparable closed investigation(s) (CC-0003, CC-2370), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.94 on 1 independent signals, with exposure $30.91 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 7,
+      "assumed_response": "Simulated response: the cardholder states they did not make this transaction and still holds the card."
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R1: require step-up authentication on further activity while verification is outstanding"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R1: assessed probability 0.56 rests on 1 signal; verify before any block"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: assessed fraud probability 0.56 reaches the 0.30 case threshold"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $30.91 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "what_changed": "The simulated customer validation response (Simulated response: the cardholder states they did not make this transaction and still holds the card.) moved the assessed probability from 0.56 to 0.94. Added BLOCK_CARD. Withdrew STEP_UP_AUTH, VERIFY_WITH_CUSTOMER."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is strongly suspected but exposure $30.91 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
+  "tool_calls": 9,
+  "tokens": 0,
+  "latency_s": 0.2
+}

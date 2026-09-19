@@ -1,0 +1,155 @@
+{
+  "case_id": "HHG-019",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.94,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3503878"
+    ],
+    "first_suspicious_txn_id": "3503878",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 99.92,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3503878 on card C07987-K2: $99.92 online under product code R on 2016-12-01 17:28:53, scored 0.90 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3503878)",
+        "entity_ids": [
+          "3503878",
+          "C07987-K2"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 219 transactions, median $116.92, 95th percentile $556.84, maximum $1,586.94; online accounts for 26% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C07987-K2, before_ts=2016-12-01 17:28:53)",
+        "entity_ids": [
+          "C07987-K2"
+        ]
+      },
+      {
+        "claim": "Cnp new device: online purchase from a device profile never seen on this card (25 devices previously seen), marked New for the account.",
+        "source": "graph",
+        "ref": "query:device_history_for_card(card_id=C07987-K2, device_profile=Windows | other | chrome 61.0 | 1280x720, before_ts=2016-12-01 17:28:53)",
+        "entity_ids": [
+          "3503878"
+        ]
+      },
+      {
+        "claim": "Consistent with history: $99.92 is at or below the card's 95th-percentile amount ($556.84); online is 26% of this card's history; 5 prior transactions in billing region 264; product code R is 6% of this card's history.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C07987-K2, before_ts=2016-12-01 17:28:53)",
+        "entity_ids": [
+          "C07987-K2"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2011 (confirmed_fraud, pattern out_of_region_use, exposure $3,059.89) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=online)",
+        "entity_ids": [
+          "CC-2011"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2087 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
+        "entity_ids": [
+          "CC-2087"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2860 (confirmed_fraud, pattern card_not_present_fraud, exposure $149.92) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
+        "entity_ids": [
+          "CC-2860"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-5026 (confirmed_fraud, pattern out_of_region_use, exposure $309.86) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=online)",
+        "entity_ids": [
+          "CC-5026"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2011",
+      "CC-2087",
+      "CC-2860",
+      "CC-5026",
+      "CC-3894",
+      "CC-0730"
+    ],
+    "summary": "Risk score on card C07987-K2: $99.92 online on 2016-12-01, scored 0.90 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-2011, CC-2087, CC-2860), used as context rather than as a finding about this transaction. Evidence conflicts: cnp_new_device point to fraud while consistent_with_history point to legitimate use. Assessed as fraud at probability 0.94 on 3 independent signals, with exposure $99.92 across 1 transaction(s). Recommended: BLOCK_CARD (L1), MONITOR_CARD (auto), CREATE_CASE (auto), ESCALATE_TO_ANALYST (auto).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2 by analogy: assessed probability 0.94 with 3 independent signals supports blocking the card; exposure $99.92"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "monitor the card while reissue is arranged"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: assessed fraud probability 0.94 reaches the 0.30 case threshold"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R8: the evidence conflicts"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2 by analogy: assessed probability 0.94 with 3 independent signals supports blocking the card; exposure $99.92"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "monitor the card while reissue is arranged"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: assessed fraud probability 0.94 reaches the 0.30 case threshold"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R8: the evidence conflicts"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is strongly suspected but exposure $99.92 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "Fraud probability 0.94 is at or above 0.85 with 3 independent pieces of evidence (policy 6).",
+  "tool_calls": 12,
+  "tokens": 0,
+  "latency_s": 0.21
+}

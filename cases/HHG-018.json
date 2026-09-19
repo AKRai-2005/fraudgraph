@@ -1,0 +1,127 @@
+{
+  "case_id": "HHG-018",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.723,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3491361"
+    ],
+    "first_suspicious_txn_id": "3491361",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 39.08,
+    "evidence": [
+      {
+        "claim": "Flagged transaction 3491361 on card C02354-K2: $39.08 in-person under product code W on 2016-11-27 13:41:26, scored 0.48 by the bank's model.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3491361)",
+        "entity_ids": [
+          "3491361",
+          "C02354-K2"
+        ]
+      },
+      {
+        "claim": "The card's established behaviour before this alert: 5860 transactions, median $86.91, 95th percentile $445.09, maximum $4,438.01; in_person accounts for 92% of them.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C02354-K2, before_ts=2016-11-27 13:41:26)",
+        "entity_ids": [
+          "C02354-K2"
+        ]
+      },
+      {
+        "claim": "Consistent with history: $39.08 is at or below the card's 95th-percentile amount ($445.09); in_person is 92% of this card's history; 565 prior transactions in billing region 126; product code W is 92% of this card's history.",
+        "source": "graph",
+        "ref": "query:card_profile(card_id=C02354-K2, before_ts=2016-11-27 13:41:26)",
+        "entity_ids": [
+          "C02354-K2"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0255 (confirmed_fraud, pattern account_takeover, exposure $1,167.08) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=account_takeover, channel=in_person)",
+        "entity_ids": [
+          "CC-0255"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0405 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=in_person)",
+        "entity_ids": [
+          "CC-0405"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0454 (confirmed_fraud, pattern account_takeover, exposure $940.94) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=account_takeover, channel=in_person)",
+        "entity_ids": [
+          "CC-0454"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0631 (confirmed_fraud, pattern out_of_region_use, exposure $118.17) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=in_person)",
+        "entity_ids": [
+          "CC-0631"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0255",
+      "CC-0405",
+      "CC-0454",
+      "CC-0631",
+      "CC-1450",
+      "CC-1699"
+    ],
+    "summary": "Customer report on card C02354-K2: $39.08 in-person on 2016-11-27, scored 0.48 by the bank's model. $39.08 is at or below the card's 95th-percentile amount ($445.09); in_person is 92% of this card's history; 565 prior transactions in billing region 126; product code w is 92% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-0255, CC-0405, CC-0454), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.72 on 2 independent signals, with exposure $39.08 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $39.08 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $39.08 is within the $2,500 L1 limit"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: confirmed unauthorised use opens a case"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: fraud is strongly suspected but exposure $39.08 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
+  "tool_calls": 9,
+  "tokens": 0,
+  "latency_s": 0.37
+}
