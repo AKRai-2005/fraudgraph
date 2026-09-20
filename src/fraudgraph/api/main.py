@@ -4,6 +4,7 @@ Run:  python -m fraudgraph.api.main
 """
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -23,8 +24,22 @@ app = FastAPI(
     description="Graph-grounded fraud investigation agent on TigerGraph (HHGOA IEEE-CIS).",
     version="1.0.0",
 )
+# The console is same-origin, so it needs no CORS at all; the allowance exists
+# only so the API can be poked from a separate dev server.  It used to be
+# allow_origins=["*"] with allow_methods=["*"], which let any page the analyst
+# happened to have open POST to this service -- recording an approval on a
+# case, or kicking off investigations -- because the preflight would succeed
+# for every origin.  Localhost only now, and widened deliberately via
+# FG_CORS_ORIGINS if someone really is serving the frontend elsewhere.
+_ORIGINS = [o.strip() for o in os.getenv("FG_CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=_ORIGINS or [
+        f"http://localhost:{RUNTIME.api_port}",
+        f"http://127.0.0.1:{RUNTIME.api_port}",
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["content-type"],
 )
 
 

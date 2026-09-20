@@ -60,6 +60,8 @@ evidence in `docs/DATA_NOTES.md`.
 
 ```bash
 pip install -r requirements.txt
+pip install -e .          # puts fraudgraph on the path; every `python -m
+                          # fraudgraph...` command below needs it
 ```
 
 Point the code at the dataset (it already defaults to `data/raw/`):
@@ -90,11 +92,25 @@ Open the console:
 python run_api.py        # http://127.0.0.1:8077
 ```
 
+It opens on the chart below, which is the argument for the whole project:
+where the bank's risk score and the agent's assessment part company. On the
+20 exam alerts they disagree on 18 — nine escalated by graph evidence, nine
+cleared by it. Pick a case and press **Watch it investigate** to see the
+agent work: each reasoning step and each graph query streams in as it runs,
+with the time it really took.
+
 Run the tests:
 
 ```bash
-python -m pytest -q
+python -m pytest -q                       # 190 tests
+python scripts/compare_backends.py local local      # determinism
+python scripts/compare_backends.py local tigergraph # cross-backend agreement
 ```
+
+The last one is the important one, and it needs a running workspace. The
+three backends are meant to be interchangeable, and checking only the
+verdicts hid two bugs that changed the *evidence*: see
+[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 
 Everything above works with **no credentials at all** — the local mirror serves
 the same query catalogue and the narrative falls back to templates. Credentials

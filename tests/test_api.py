@@ -239,3 +239,31 @@ def test_static_mount_does_not_serve_the_project_root(client):
     for attempt in ("/static/../.env", "/static/..%2f.env", "/static/../../.env"):
         r = client.get(attempt)
         assert r.status_code != 200 or "TG_SECRET" not in r.text
+
+
+def test_cors_does_not_admit_arbitrary_origins(client):
+    """A page the analyst happens to have open must not be able to POST here.
+
+    With allow_origins=["*"] and allow_methods=["*"] the preflight succeeded
+    for every origin, so any site could record an approval on a case or start
+    investigations on this console.
+    """
+    r = client.options("/api/cases/HHG-001/approve", headers={
+        "origin": "https://evil.example",
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+    })
+    allowed = r.headers.get("access-control-allow-origin", "")
+    assert allowed not in ("*", "https://evil.example"), f"CORS admitted {allowed!r}"
+
+
+def test_cors_still_admits_the_console_itself(client):
+    from fraudgraph.config import RUNTIME
+
+    origin = f"http://127.0.0.1:{RUNTIME.api_port}"
+    r = client.options("/api/cases/HHG-001/approve", headers={
+        "origin": origin,
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+    })
+    assert r.headers.get("access-control-allow-origin") == origin

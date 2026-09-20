@@ -72,6 +72,46 @@ above are against the *closed cases*, which is a different and easier problem.
    "V127 was elevated" is not evidence an analyst can act on. This leaves
    signal on the table.
 
+## The three backends agree, and did not used to
+
+The catalogue is a contract: an investigation run against TigerGraph, against
+the official `tigergraph-mcp` server, or against the local pandas mirror is
+supposed to reach the same conclusion from the same evidence. That was checked
+by comparing verdicts, probabilities, patterns and exposures, and they always
+matched. Comparing the *whole answer* found two places where they did not.
+
+1. **`card_profile` computed percentiles two ways.** pandas interpolates
+   between neighbouring observations; the GSQL path took the nearest observed
+   amount. The same card's 95th percentile was $424.99 on TigerGraph and
+   $425.08 on the local mirror. The definition now lives in the catalogue
+   (`graph/queries.py:quantile_nearest`) and both backends call it. Nearest
+   rank is also the honest choice: the evidence sentence claims 95% of the
+   card's history is at or below that figure, which is only true of an amount
+   that actually occurred.
+
+2. **Case memory cited different prior cases.** Every "prior investigation on
+   this exact card" scores 1.0, so ties are the rule rather than the
+   exception, and a stable sort preserved insertion order — which is the order
+   the engine returned its rows in. The same alert cited CC-2935 on TigerGraph
+   and CC-1589 on the local mirror. Ranking now ends in `case_id`, and
+   `similar_closed_cases` is split into a server-side candidate stage and one
+   shared client-side ranking; the two backends had been using entirely
+   different scoring functions behind the same catalogue name.
+
+Both changed the evidence in a published answer file while leaving the verdict,
+the probability and the exposure identical. `tests/test_backend_agreement.py`
+pins both, and `scripts/compare_backends.py` diffs two full runs field by
+field, with the fields that may legitimately differ excluded by name and
+reason.
+
+**Still outstanding:** the committed answer files in `cases/` were generated
+before these fixes, so their case-memory ordering is the old one. They need
+regenerating against TigerGraph, and `scripts/compare_backends.py local
+tigergraph` needs to run green, before the agreement claim covers the
+published files rather than just the code. The cross-backend test skips —
+loudly, with the reason attached — whenever the workspace is unreachable; it
+is not a test that passes by default.
+
 ## The LLM's free tier is the binding constraint
 
 Gemini's free tier allows **20 `generateContent` requests per day per model**
@@ -103,8 +143,9 @@ come from the LLM, so a quota exhaustion changes only the prose.
   development and testing backend, not a production one.
 * Graph loading to a cloud workspace uploads ~90 MB of CSV over REST and takes
   a while; it is idempotent and resumable but not fast.
-* The dashboard polls rather than streaming; a long investigation shows a
-  spinner rather than incremental steps.
+* The console streams an investigation over SSE, which needs one connection
+  held open per viewer. That is fine for an analyst desk and would need
+  rethinking for hundreds of concurrent watchers.
 * The force-directed graph layout is computed in the browser with a simple
   O(n²) relaxation, capped at 160 nodes. It is readable, not a full graph
   explorer.
