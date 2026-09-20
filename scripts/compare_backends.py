@@ -30,6 +30,9 @@ def run_into(backend: str, out_dir: Path) -> str:
     """Run the 20 cases on ``backend``, writing answers into ``out_dir``."""
     out_dir.mkdir(parents=True, exist_ok=True)
     os.environ["FG_CASES_DIR"] = str(out_dir)
+    # redirect the internal records too, or the two runs overwrite each other's
+    # -- and the ones the dashboard is displaying
+    os.environ["FG_RECORDS_DIR"] = str(out_dir / "records")
     # config is read at import time, so reload the modules that captured it
     import importlib
 

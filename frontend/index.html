@@ -29,6 +29,26 @@
 <main>
   <!-- ============================ OVERVIEW ============================ -->
   <section id="view-overview" class="view active">
+    <section class="panel hero" aria-labelledby="divergenceTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="divergenceTitle">Where the graph disagrees with the score</h2>
+          <p class="panel-hint">Every alert arrives with a risk score. The agent
+            investigates it against the graph and reaches its own probability.
+            When the two differ, the evidence is the reason &mdash; click any point
+            to read it.</p>
+        </div>
+        <div class="hero-stats" id="divergenceStats"></div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="divergenceChart" role="img"
+             aria-labelledby="divergenceTitle" aria-describedby="divergenceDesc"></svg>
+        <p id="divergenceDesc" class="sr-only"></p>
+        <div class="chart-tip" id="divergenceTip" role="status" aria-live="polite"></div>
+      </div>
+      <div id="divergenceCallouts" class="callouts"></div>
+    </section>
+
     <div class="kpi-grid" id="kpis"></div>
     <div class="two-col">
       <div class="panel">

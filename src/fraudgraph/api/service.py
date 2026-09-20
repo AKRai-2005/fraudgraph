@@ -47,7 +47,7 @@ class CaseService:
     # ------------------------------------------------------------- storage
     @property
     def records_dir(self) -> Path:
-        d = PATHS.build / "case_records"
+        d = PATHS.records
         d.mkdir(parents=True, exist_ok=True)
         return d
 
@@ -215,6 +215,83 @@ class CaseService:
                 "written_to_graph": c.get("written_to_graph"),
             })
         return sorted(out, key=lambda r: (-(r["fraud_probability"] or 0), r["case_id"]))
+
+    # ----------------------------------------------------------- divergence
+    # How far the agent moved from the score that raised the alert, and what
+    # moved it. This is the whole argument for doing graph investigation at
+    # all, so it is computed from the same records the queue is built from --
+    # nothing here is a constant.
+    AGREEMENT_BAND = 0.25  # |agent - bank| inside this is "agreed"
+
+    def divergence(self) -> dict:
+        points, escalated, cleared, agreed = [], 0, 0, 0
+        for r in self.all_records():
+            risk = r.get("risk") or {}
+            bank = risk.get("bank_risk_score")
+            c = (r.get("answer") or {}).get("case", {})
+            agent = c.get("fraud_probability")
+            if bank is None or agent is None:
+                # a customer report or analyst request carries no model score;
+                # there is no divergence to plot, only a verdict
+                continue
+            delta = float(agent) - float(bank)
+            if delta > self.AGREEMENT_BAND:
+                direction = "escalated"
+                escalated += 1
+            elif delta < -self.AGREEMENT_BAND:
+                direction = "cleared"
+                cleared += 1
+            else:
+                direction = "agreed"
+                agreed += 1
+            points.append({
+                "case_id": r.get("case_id"),
+                "bank_risk_score": round(float(bank), 3),
+                "fraud_probability": round(float(agent), 3),
+                "delta": round(delta, 3),
+                "direction": direction,
+                "verdict": c.get("verdict"),
+                "pattern": c.get("pattern"),
+                "exposure_usd": c.get("exposure_usd"),
+                "confidence": risk.get("confidence"),
+                "independent_signals": risk.get("independent_signal_count"),
+                "trigger_type": (r.get("trigger") or {}).get("trigger_type"),
+                "driver": self._driver(risk),
+                "note": (risk.get("uncertainty_notes") or [None])[0],
+            })
+        points.sort(key=lambda p: -abs(p["delta"]))
+        return {
+            "agreement_band": self.AGREEMENT_BAND,
+            "n_scored": len(points),
+            "escalated": escalated,
+            "cleared": cleared,
+            "agreed": agreed,
+            "largest_gap": points[0] if points else None,
+            "points": points,
+        }
+
+    @staticmethod
+    def _driver(risk: dict) -> dict | None:
+        """The single signal that moved this case furthest, in log-odds.
+
+        Trigger priors and the corroboration bonus are excluded: they are how
+        the model starts and how it rewards agreement between signals, not a
+        thing the graph found.
+        """
+        contribs = [
+            x for x in (risk.get("contributions") or [])
+            if not str(x.get("signal", "")).startswith("trigger_prior")
+            and x.get("signal") != "corroboration"
+            and abs(float(x.get("log_odds") or 0)) > 0.01
+        ]
+        if not contribs:
+            return None
+        top = max(contribs, key=lambda x: abs(float(x.get("log_odds") or 0)))
+        return {
+            "signal": top.get("signal"),
+            "log_odds": round(float(top.get("log_odds") or 0), 3),
+            "strength": top.get("value"),
+        }
 
     def _mtime(self, case_id: str) -> str:
         p = self.records_dir / f"{case_id}.json"

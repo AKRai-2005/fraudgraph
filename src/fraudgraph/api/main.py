@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -62,6 +62,12 @@ def overview():
 @app.get("/api/queue")
 def queue():
     return svc().queue()
+
+
+@app.get("/api/divergence")
+def divergence():
+    """Where the agent ended up relative to the score that raised the alert."""
+    return svc().divergence()
 
 
 @app.get("/api/case-pack")
@@ -152,20 +158,50 @@ def action_log(case_id: str | None = None):
 
 
 # ---- static frontend -------------------------------------------------------
+def _asset_version() -> str:
+    """A token that changes whenever the JS or CSS changes.
+
+    Without it the browser keeps serving the bundle it already has: a reload
+    after an update silently ran the old app.js against the new API, and the
+    new panel simply never appeared. The page itself is sent no-store, so the
+    version token is always re-read.
+    """
+    stamp = 0.0
+    for name in ("app.js", "styles.css"):
+        f = FRONTEND / name
+        if f.exists():
+            stamp = max(stamp, f.stat().st_mtime)
+    return f"{int(stamp)}"
+
+
 if FRONTEND.exists():
     @app.get("/")
     def index():
         f = FRONTEND / "index.html"
-        if f.exists():
-            return FileResponse(f)
-        return JSONResponse({"error": "frontend not built"}, status_code=404)
+        if not f.exists():
+            return JSONResponse({"error": "frontend not built"}, status_code=404)
+        html = f.read_text(encoding="utf-8")
+        v = _asset_version()
+        html = (html.replace("/static/app.js", f"/static/app.js?v={v}")
+                    .replace("/static/styles.css", f"/static/styles.css?v={v}"))
+        return HTMLResponse(html, headers={"cache-control": "no-store"})
 
     app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
 
 
 def main() -> None:
+    import os
+
     import uvicorn
 
+    # FG_RELOAD=1 restarts on edit. Off by default: reload needs an import
+    # string rather than the app object, which re-imports the whole package
+    # (and re-reads the 590k-row parquet cache) on every save.
+    if os.getenv("FG_RELOAD", "").lower() in ("1", "true", "yes"):
+        uvicorn.run("fraudgraph.api.main:app", host=RUNTIME.api_host,
+                    port=RUNTIME.api_port, log_level="info", reload=True,
+                    reload_dirs=[str(Path(__file__).resolve().parents[2])])
+        return
     uvicorn.run(app, host=RUNTIME.api_host, port=RUNTIME.api_port, log_level="info")
 
 

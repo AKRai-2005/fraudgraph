@@ -108,7 +108,7 @@ def _write_internal(answer: AnswerFile, provenance: dict | None = None) -> None:
     re-run and names the backend that served it, so a record produced while
     TigerGraph was asleep cannot be mistaken for the submitted answer.
     """
-    d = PATHS.build / "case_records"
+    d = PATHS.records
     d.mkdir(parents=True, exist_ok=True)
     flagged_ts = ""
     for t in answer.timeline:

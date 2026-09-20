@@ -101,11 +101,187 @@ async function loadOverview() {
     `<div class="act"><span class="cid" data-case="${esc(a.case_id)}">${esc(a.case_id)}</span>
      <span class="kind">${esc(a.kind)}</span><span class="d">${esc(a.detail)}</span></div>`).join('')
     || '<div class="muted">No investigations have been run yet.</div>';
-  $$('#recentActivity .cid').forEach((el) =>
-    el.addEventListener('click', () => openCase(el.dataset.case)));
+  $$('#recentActivity .cid').forEach((node) =>
+    node.addEventListener('click', () => openCase(node.dataset.case)));
+
+  loadDivergence();
 }
 
 const kpi = (v, l, s) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div><div class="s">${s}</div></div>`;
+
+/* ================================================= score vs evidence chart
+ * The argument for doing graph investigation at all, drawn from the records:
+ * an alert arrives with a score, the agent investigates, and the two rarely
+ * land in the same place. Points off the diagonal are cases where the graph
+ * overruled the model -- in both directions.
+ */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const VERDICT_COLOR = { fraud: 'var(--fraud)', legitimate: 'var(--legit)', uncertain: 'var(--uncertain)' };
+const el = (name, attrs = {}, text) => {
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  return n;
+};
+const signalText = (s) => String(s || '').replace(/_/g, ' ');
+
+async function loadDivergence() {
+  const svg = $('#divergenceChart');
+  if (!svg) return;
+  let d;
+  try { d = await api('/api/divergence'); } catch (e) {
+    $('#divergenceStats').innerHTML = `<span class="muted">chart unavailable: ${esc(e.message)}</span>`;
+    return;
+  }
+  state.divergence = d;
+  const total = d.n_scored;
+  const moved = d.escalated + d.cleared;
+  $('#divergenceStats').innerHTML = total ? `
+    <div class="hero-stat"><b>${moved}</b><span>of ${total} alerts moved</span></div>
+    <div class="hero-stat up"><b>${d.escalated}</b><span>escalated by evidence</span></div>
+    <div class="hero-stat down"><b>${d.cleared}</b><span>cleared by evidence</span></div>` : '';
+  drawDivergence(d);
+  renderCallouts(d);
+}
+
+function drawDivergence(d) {
+  const svg = $('#divergenceChart');
+  svg.innerHTML = '';
+  if (!d.points.length) {
+    $('#divergenceChart').appendChild(el('text', { x: 20, y: 30, fill: 'var(--text-faint)', 'font-size': 12 },
+      'No scored alerts have been investigated yet.'));
+    return;
+  }
+  const W = 1000, H = 430, M = { t: 22, r: 24, b: 50, l: 58 };
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const X = (v) => M.l + v * iw;
+  const Y = (v) => M.t + (1 - v) * ih;
+  const band = d.agreement_band;
+
+  const g = el('g');
+  svg.appendChild(g);
+
+  // agreement band: |agent - bank| <= band
+  const poly = [[0, band], [1 - band, 1], [1, 1], [1, 1 - band], [band, 0], [0, 0]]
+    .map(([x, y]) => `${X(x)},${Y(y)}`).join(' ');
+  g.appendChild(el('polygon', { points: poly, fill: 'var(--agree-fill)', stroke: 'none' }));
+  g.appendChild(el('line', {
+    x1: X(0), y1: Y(0), x2: X(1), y2: Y(1),
+    stroke: 'var(--line)', 'stroke-width': 1, 'stroke-dasharray': '4 4',
+  }));
+
+  // gridlines and ticks
+  for (let i = 0; i <= 5; i++) {
+    const v = i / 5;
+    g.appendChild(el('line', { x1: X(0), y1: Y(v), x2: X(1), y2: Y(v), stroke: 'var(--line-soft)', 'stroke-width': 1 }));
+    g.appendChild(el('line', { x1: X(v), y1: Y(0), x2: X(v), y2: Y(1), stroke: 'var(--line-soft)', 'stroke-width': 1 }));
+    g.appendChild(el('text', { x: M.l - 10, y: Y(v) + 4, fill: 'var(--text-faint)', 'font-size': 11, 'text-anchor': 'end' }, v.toFixed(1)));
+    g.appendChild(el('text', { x: X(v), y: H - M.b + 18, fill: 'var(--text-faint)', 'font-size': 11, 'text-anchor': 'middle' }, v.toFixed(1)));
+  }
+  g.appendChild(el('text', { x: M.l + iw / 2, y: H - 10, fill: 'var(--text-dim)', 'font-size': 12, 'text-anchor': 'middle' },
+    "Bank model's risk score at the time of the alert"));
+  const yl = el('text', { x: 14, y: M.t + ih / 2, fill: 'var(--text-dim)', 'font-size': 12, 'text-anchor': 'middle' },
+    "Agent's assessed probability");
+  yl.setAttribute('transform', `rotate(-90 14 ${M.t + ih / 2})`);
+  g.appendChild(yl);
+
+  // quadrant hints
+  g.appendChild(el('text', { x: X(0.02), y: Y(0.86), fill: 'var(--text-faint)', 'font-size': 10.5 },
+    'low score, high evidence — the model missed it'));
+  g.appendChild(el('text', { x: X(0.98), y: Y(0.14), fill: 'var(--text-faint)', 'font-size': 10.5, 'text-anchor': 'end' },
+    'high score, no evidence — a false alarm'));
+
+  // points
+  const tip = $('#divergenceTip');
+  const sorted = d.points.slice().sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+  sorted.forEach((p) => {
+    const cx = X(p.bank_risk_score), cy = Y(p.fraud_probability);
+    const far = Math.abs(p.delta) > d.agreement_band;
+    const node = el('g', {
+      class: 'pt' + (far ? ' far' : ''), tabindex: '0', role: 'button',
+      'aria-label': `${p.case_id}: bank score ${p.bank_risk_score.toFixed(2)}, agent ${p.fraud_probability.toFixed(2)}, ${p.verdict}. Open case.`,
+    });
+    if (far) {
+      node.appendChild(el('line', {
+        x1: cx, y1: cy, x2: X(p.bank_risk_score), y2: Y(p.bank_risk_score),
+        stroke: VERDICT_COLOR[p.verdict] || 'var(--text-faint)', 'stroke-width': 1.5, opacity: 0.35,
+      }));
+    }
+    node.appendChild(el('circle', {
+      cx, cy, r: far ? 8 : 6,
+      fill: VERDICT_COLOR[p.verdict] || 'var(--text-faint)',
+      'fill-opacity': far ? 0.9 : 0.5,
+      stroke: 'var(--bg)', 'stroke-width': 1.5,
+    }));
+    const showTip = () => {
+      const dr = p.driver;
+      tip.innerHTML = `<b>${esc(p.case_id)}</b> &middot; <span class="tag ${esc(p.verdict)}">${esc(p.verdict)}</span>
+        <div>score <b>${p.bank_risk_score.toFixed(2)}</b> &rarr; agent <b>${p.fraud_probability.toFixed(2)}</b>
+        (${p.delta >= 0 ? '+' : ''}${p.delta.toFixed(2)})</div>
+        ${dr ? `<div class="muted">moved most by <b>${esc(signalText(dr.signal))}</b></div>` : ''}
+        ${p.exposure_usd ? `<div class="muted">exposure ${money(p.exposure_usd)}</div>` : ''}
+        <div class="muted">click to open</div>`;
+      tip.style.display = 'block';
+      const wrap = svg.getBoundingClientRect();
+      const sx = wrap.width / W, sy = wrap.height / H;
+      tip.style.left = Math.min(wrap.width - 210, Math.max(4, cx * sx + 12)) + 'px';
+      tip.style.top = Math.max(4, cy * sy - 8) + 'px';
+    };
+    node.addEventListener('mouseenter', showTip);
+    node.addEventListener('focus', showTip);
+    node.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    node.addEventListener('blur', () => { tip.style.display = 'none'; });
+    node.addEventListener('click', () => openCase(p.case_id));
+    node.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openCase(p.case_id); }
+    });
+    g.appendChild(node);
+  });
+
+  // label the two furthest cases, one each way
+  const up = d.points.filter((p) => p.direction === 'escalated')[0];
+  const down = d.points.filter((p) => p.direction === 'cleared')[0];
+  [up, down].filter(Boolean).forEach((p) => {
+    const cx = X(p.bank_risk_score), cy = Y(p.fraud_probability);
+    const below = p.fraud_probability > 0.5;   // room underneath a high point
+    g.appendChild(el('text', {
+      x: cx, y: cy + (below ? 24 : -16), 'font-size': 11.5, 'font-weight': 600,
+      fill: VERDICT_COLOR[p.verdict] || 'var(--text)',
+      'text-anchor': 'middle', 'pointer-events': 'none',
+    }, p.case_id));
+  });
+
+  $('#divergenceDesc').textContent =
+    `Scatter plot of ${d.n_scored} investigated alerts. ${d.escalated} were escalated by graph `
+    + `evidence above the bank's score, ${d.cleared} were cleared below it, and ${d.agreed} agreed `
+    + `within ${d.agreement_band}. Largest gap: ${d.largest_gap ? d.largest_gap.case_id : 'none'}.`;
+}
+
+function renderCallouts(d) {
+  const box = $('#divergenceCallouts');
+  if (!box) return;
+  const up = d.points.filter((p) => p.direction === 'escalated')[0];
+  const down = d.points.filter((p) => p.direction === 'cleared')[0];
+  const card = (p, kind) => {
+    if (!p) return '';
+    const dr = p.driver;
+    return `<button class="callout ${kind}" data-case="${esc(p.case_id)}">
+      <div class="callout-head">${kind === 'up' ? 'Missed by the score' : 'False alarm'}
+        <span class="mono">${esc(p.case_id)}</span></div>
+      <div class="callout-move">
+        <span class="from">${p.bank_risk_score.toFixed(2)}</span>
+        <span class="arrow" aria-hidden="true">&rarr;</span>
+        <span class="to" style="color:${VERDICT_COLOR[p.verdict]}">${p.fraud_probability.toFixed(2)}</span>
+        <span class="tag ${esc(p.verdict)}">${esc(p.verdict)}</span>
+      </div>
+      <div class="callout-why">${dr ? `Moved most by <b>${esc(signalText(dr.signal))}</b>. ` : ''}${esc(p.note || '')}</div>
+    </button>`;
+  };
+  box.innerHTML = card(up, 'up') + card(down, 'down');
+  $$('.callout', box).forEach((b) => b.addEventListener('click', () => openCase(b.dataset.case)));
+}
 
 /* =============================================================== queue */
 async function loadQueue() {

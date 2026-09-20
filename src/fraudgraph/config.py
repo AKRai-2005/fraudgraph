@@ -27,6 +27,16 @@ class Paths:
     build: Path = field(default_factory=lambda: _path("FG_BUILD_DIR", PROJECT_ROOT / "build"))
     cases_out: Path = field(default_factory=lambda: _path("FG_CASES_DIR", PROJECT_ROOT / "cases"))
     docs: Path = field(default_factory=lambda: PROJECT_ROOT / "docs")
+    # The internal records the console reads. Separate from FG_CASES_DIR so a
+    # comparison run can redirect *both*: redirecting only the answer files
+    # left two backends writing over each other's records in build/, and over
+    # the ones the dashboard was displaying.
+    records: Path = field(
+        default_factory=lambda: _path(
+            "FG_RECORDS_DIR",
+            _path("FG_BUILD_DIR", PROJECT_ROOT / "build") / "case_records",
+        )
+    )
 
     # raw dataset files
     @property
