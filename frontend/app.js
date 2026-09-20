@@ -604,10 +604,35 @@ async function loadModel() {
     el.innerHTML = `
       <div class="panel">
         <h2>Risk model card</h2>
-        <p class="panel-hint">${esc(m.source)}. Fraud probability is a logistic combination of
-          detector strengths; the coefficients below are sign-constrained so the data sets
-          magnitudes but cannot invert a signal's direction.</p>
-        ${met.overall ? `<div class="facts">
+        <p class="panel-hint">${esc(m.method || m.source)}. Fraud probability is the trigger's
+          prior plus the measured log likelihood ratio of every detector that fired. A detector
+          that does not fire contributes nothing.</p>
+        <div class="facts">
+          ${Object.entries(m.trigger_prior || {}).map(([k, v]) =>
+            fact(k.replace(/_/g, ' '), `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`,
+                 v > 0 ? 'var(--fraud)' : v < 0 ? 'var(--legit)' : '')).join('')}
+        </div>
+        <p class="panel-hint">${esc(m.trigger_prior_note || '')}</p>
+        ${(m.weight_basis || []).length ? `
+        <div class="table-wrap" style="margin-top:12px"><table><thead><tr>
+          <th>Detector</th><th>Weight</th><th>Fires on fraud</th><th>Fires on legitimate</th><th>Basis</th>
+        </tr></thead><tbody>
+        ${m.weight_basis.slice().sort((a,b) => Math.abs(b.weight) - Math.abs(a.weight)).map((b) => `
+          <tr><td class="mono">${esc(b.detector)}</td>
+            <td class="num" style="color:${b.weight > 0 ? 'var(--fraud)' : b.weight < 0 ? 'var(--legit)' : 'var(--text-dim)'}">${b.weight >= 0 ? '+' : ''}${Number(b.weight).toFixed(2)}</td>
+            <td class="num">${b.rate_fraud_pct}%</td>
+            <td class="num">${b.rate_legit_pct}%</td>
+            <td style="white-space:normal;max-width:460px;font-size:11.5px;color:var(--text-dim)">
+              <span class="tag">${esc(b.source)}</span> ${esc(b.basis)}</td></tr>`).join('')}
+        </tbody></table></div>` : ''}
+        ${m.notes && m.notes.design ? `<details style="margin-top:12px"><summary>Why the model is built this way</summary>
+          <pre class="json" style="white-space:pre-wrap">${esc(m.notes.design)}</pre></details>` : ''}
+        ${met.overall ? `<h3 style="font-size:13px;margin-top:18px">The logistic fit, and why it is not used</h3>
+        <p class="panel-hint">Kept and reported because its failure is the evidence for the
+          design above: fitted to separate confirmed fraud from cleared alerts, graph features
+          score near chance, because the cleared alerts are the most anomalous legitimate
+          activity the bank could find.</p>
+        <div class="facts">
           ${fact('ROC AUC (out-of-fold)', Number(met.overall.roc_auc).toFixed(3))}
           ${fact('Accuracy', Number(met.overall.accuracy).toFixed(3))}
           ${fact('Recall (fraud)', Number(met.overall.recall_fraud).toFixed(3))}
@@ -622,14 +647,15 @@ async function loadModel() {
           Against ordinary unalerted activity: AUC
           ${Number((met.vs_unalerted_base_rate || {}).roc_auc || 0).toFixed(3)}.</p>` : ''}
         <div style="margin-top:12px">
-          ${ws.map(([k, v]) => `<div class="dist-row" style="grid-template-columns:200px 1fr 54px">
+          ${ws.filter(([, v]) => v).map(([k, v]) => `<div class="dist-row" style="grid-template-columns:200px 1fr 54px">
             <span class="muted">${esc(k)}</span>
             <span class="wbar"><i style="${v >= 0 ? 'left:50%' : 'right:50%'};width:${(Math.abs(v) / maxW) * 50}%;background:${v >= 0 ? 'var(--fraud)' : 'var(--legit)'}"></i></span>
             <span class="n">${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}</span></div>`).join('')}
         </div>
-        <div class="panel-hint" style="margin-top:12px">Intercept ${Number(m.intercept).toFixed(2)};
-          fitted prior ${Number(m.fitted_prior).toFixed(2)}; deployment prior
-          ${Number(m.deployment_prior).toFixed(2)}; log-odds offset ${Number(m.prior_offset).toFixed(2)}.</div>
+        <div class="panel-hint" style="margin-top:12px">No global intercept &mdash; the prior lives
+          on the trigger. Each detector term is clipped at &plusmn;${m.max_abs_weight || 2.6} log-odds,
+          so no single detector can carry a case alone.
+          ${m.class_counts ? `Measured on ${Object.entries(m.class_counts).map(([k, v]) => `${v.toLocaleString()} ${k.replace(/_/g, ' ')}`).join(', ')}.` : ''}</div>
         ${Object.values(m.notes || {}).filter(Boolean).map((n) => `<div class="warnbox">${esc(n)}</div>`).join('')}
         ${(met.detector_firing_rates || []).length ? `
           <details open><summary>Detector firing rates (measured, not asserted)</summary>
