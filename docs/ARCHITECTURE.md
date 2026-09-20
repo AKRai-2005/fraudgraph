@@ -33,7 +33,7 @@ together are the audit trail the dashboard shows and the answer file counts.
 
 ## Components
 
-### `graph/` — one catalogue, two backends
+### `graph/` — one catalogue, three backends
 
 `graph/queries.py` is the contract: 17 named queries with declared parameters
 and a stated purpose. Three backends implement it:
@@ -52,8 +52,8 @@ duration, ok/error, result summary) and turns a query into the `ref` string that
 appears in evidence. A failing call returns `{"error": ...}` and is recorded as
 a gap; it never raises into the investigation and never reads as evidence.
 
-Having two implementations of one contract is not redundancy for its own sake:
-it lets the whole investigation be unit-tested without a database, keeps
+Having three implementations of one contract is not redundancy for its own
+sake: it lets the whole investigation be unit-tested without a database, keeps
 development moving when a cloud workspace is asleep, and gives an independent
 check on graph results. The answer files record which backend served each
 investigation, and `write_case` on the mirror deliberately returns
@@ -102,9 +102,13 @@ always records what was attempted, whether or not the graph accepted it.
 
 ## Graph schema
 
-Vertices: `Customer`, `Card`, `Transaction`, `DeviceProfile`, `BillingRegion`,
-`EmailDomain`, `ClosedCase`, `AgentCase`, `CaseEvidence`, `FraudPattern`,
-`PolicyRule`.
+Vertices: `Customer`, `PaymentCard`, `Transaction`, `DeviceProfile`,
+`BillingRegion`, `EmailDomain`, `ClosedCase`, `AgentCase`, `CaseEvidence`,
+`FraudPattern`, `PolicyRule`.
+
+The card vertex is `PaymentCard`, not `Card`: vertex types are global in
+TigerGraph, and a Savanna workspace that has run the shipped `Transaction_Fraud`
+sample already owns a global `Card`.
 
 Edges: `OWNS`, `MADE`, `FROM_DEVICE`, `BILLED_IN`, `PURCHASER_EMAIL`,
 `RECIPIENT_EMAIL`, `NEXT_TXN`, `INVOLVES`, `ON_CARD`, `CONNECTED_TO`,
@@ -119,11 +123,11 @@ in an answer file.
 The pivot that matters is two hops:
 
 ```
-Transaction ──FROM_DEVICE──▶ DeviceProfile ──DEVICE_USED_BY──▶ Transaction ──MADE_BY──▶ Card
+Transaction ──FROM_DEVICE──▶ DeviceProfile ──DEVICE_USED_BY──▶ Transaction ──MADE_BY──▶ PaymentCard
 ```
 
 That is how a $74.96 purchase scored 0.05 by the bank's model becomes a
-24-card ring.
+28-card ring.
 
 ## Where the LLM is, and is not
 
