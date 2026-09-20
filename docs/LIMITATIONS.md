@@ -78,7 +78,7 @@ The catalogue is a contract: an investigation run against TigerGraph, against
 the official `tigergraph-mcp` server, or against the local pandas mirror is
 supposed to reach the same conclusion from the same evidence. That was checked
 by comparing verdicts, probabilities, patterns and exposures, and they always
-matched. Comparing the *whole answer* found two places where they did not.
+matched. Comparing the *whole answer* found three places where they did not.
 
 1. **`card_profile` computed percentiles two ways.** pandas interpolates
    between neighbouring observations; the GSQL path took the nearest observed
@@ -98,19 +98,41 @@ matched. Comparing the *whole answer* found two places where they did not.
    shared client-side ranking; the two backends had been using entirely
    different scoring functions behind the same catalogue name.
 
-Both changed the evidence in a published answer file while leaving the verdict,
-the probability and the exposure identical. `tests/test_backend_agreement.py`
-pins both, and `scripts/compare_backends.py` diffs two full runs field by
-field, with the fields that may legitimately differ excluded by name and
-reason.
+3. **`device_neighbors` returned its cards unordered**, and the shared-origin
+   evidence item cites only the first 25 of them. So the two backends named
+   *different subsets* of HHG-014's 28-card ring as evidence — not the same
+   cards reordered. `connected_card_ids` had been sorted since the beginning;
+   this list had not. This one only surfaced once the workspace was awake and
+   the full comparison could actually run.
 
-**Still outstanding:** the committed answer files in `cases/` were generated
-before these fixes, so their case-memory ordering is the old one. They need
-regenerating against TigerGraph, and `scripts/compare_backends.py local
-tigergraph` needs to run green, before the agreement claim covers the
-published files rather than just the code. The cross-backend test skips —
-loudly, with the reason attached — whenever the workspace is unreachable; it
-is not a test that passes by default.
+All three changed the evidence in a published answer file while leaving the
+verdict, the probability and the exposure identical — which is why comparing
+the headline fields had never caught them.
+`tests/test_backend_agreement.py` pins the first two,
+`scripts/compare_backends.py` diffs two full runs field by field, and the
+fields that may legitimately differ are excluded by name and reason.
+
+Verified against a live Savanna workspace, all 20 cases, field for field:
+
+| | |
+|---|---|
+| `local` vs `tigergraph` | **agree** |
+| `local` vs `mcp` | **agree** |
+| `tigergraph` vs `mcp` | **agree** — latency only |
+
+The first two differ on three fields, each excluded by name and reason in
+`benchmark/compare.py`: wall-clock latency, and the local mirror honestly
+reporting that it did not write the case (`written_to_graph`,
+`graph_case_id`). TigerGraph and MCP differ on nothing but latency, because
+both actually persist.
+
+The cross-backend test skips — loudly, with the reason attached — whenever the
+workspace is unreachable, so it is not a test that passes by default. Run
+`scripts/compare_backends.py local tigergraph` with the workspace awake before
+any release.
+
+One caveat worth stating: agreement is checked on these 20 cases, not proved
+in general. A query path none of them exercise could still diverge.
 
 ## The LLM's free tier is the binding constraint
 

@@ -102,15 +102,16 @@ with the time it really took.
 Run the tests:
 
 ```bash
-python -m pytest -q                       # 190 tests
+python -m pytest -q                       # 197 tests
 python scripts/compare_backends.py local local      # determinism
 python scripts/compare_backends.py local tigergraph # cross-backend agreement
 ```
 
 The last one is the important one, and it needs a running workspace. The
-three backends are meant to be interchangeable, and checking only the
-verdicts hid two bugs that changed the *evidence*: see
-[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
+three backends are meant to be interchangeable; checking only the verdicts
+hid three bugs that changed the *evidence* underneath. All three pairings
+now agree field for field on all 20 cases — see
+[`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) for what differs and why.
 
 Everything above works with **no credentials at all** — the local mirror serves
 the same query catalogue and the narrative falls back to templates. Credentials
