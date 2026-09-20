@@ -89,8 +89,7 @@ def run_all(backend: str = "auto", use_llm: bool = True, only: list[str] | None 
     st = summary.get("llm_stats") or {}
     if st.get("calls_rate_limited"):
         print(
-            f"
-  NOTE: {st['calls_rate_limited']} LLM call(s) hit the provider's rate "
+            f"\n  NOTE: {st['calls_rate_limited']} LLM call(s) hit the provider's rate "
             f"limit and fell back to the deterministic template. The verdicts, actions "
             f"and SAR decisions are unaffected -- they never come from the LLM -- but "
             f"some narratives are templates. Re-run when the quota resets, or raise "
