@@ -3,26 +3,57 @@
 Run before recording:
 
 ```bash
+pip install -e .                          # once
 python -m fraudgraph.benchmark.run        # 20 cases, ~10s
 python -m fraudgraph.benchmark.validate   # should print PASSED
 python run_api.py                         # http://127.0.0.1:8077
 ```
 
+Start the Savanna workspace first if you want the graph backend live — it
+suspends itself when idle, and the console will otherwise say, correctly and
+visibly, that it is serving from the local mirror. Either way the demo works;
+the status strip tells the truth about which one answered.
+
 ---
 
-## 0:00 — The problem, in one number (20s)
+## 0:00 — The whole argument, in one chart (35s)
 
-Open the **Overview** tab.
+The **Overview** opens on it. Do not scroll past it.
 
 > "590,742 card transactions, six months, no fraud label — just a risk score
-> from the bank's model. Half the exam cases are legitimate and most of them
-> look suspicious. So the hard part isn't spotting anomalies. It's refusing to
-> act on the ones that don't hold up."
+> from the bank's model on each alert. This chart is that score along the
+> bottom, and what our agent concluded after investigating it in the graph, up
+> the side. If a score were enough, every point would sit on the diagonal."
+
+Point at the counters.
+
+> "They don't. On 18 of the 20 alerts the graph moves the answer — nine
+> escalated, nine cleared. Two agree. The hard part of this problem isn't
+> spotting anomalies, it's refusing to act on the ones that don't hold up."
+
+Point top-left, then bottom-right.
+
+> "That one up there the model scored **0.05**. We closed it as fraud at 0.98.
+> That one on the right it scored **0.87**; we cleared it at 0.02. Both of
+> those are a click away from the evidence."
 
 Point at the status strip: graph backend, closed-case count, and
 **Actions: simulated** — nothing here touches a real financial system.
 
-## 0:20 — The case the risk score missed (80s)
+## 0:35 — Watch it work (45s)
+
+Click the top-left point (**HHG-014**), then **Watch it investigate**.
+
+> "This isn't a replay. The agent is running now, and every line is a real
+> step: each graph query with the time it actually took."
+
+Let it stream. When `device_neighbors` lands:
+
+> "There. It pivoted from the transaction to the device that made it, and
+> asked what else that device touched. **28 cards.** That's the moment the
+> case turns — and it's a graph traversal, not a model score."
+
+## 1:20 — The evidence behind it
 
 **Investigation queue** → open **HHG-014**.
 
