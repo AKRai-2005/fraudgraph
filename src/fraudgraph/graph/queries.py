@@ -167,3 +167,81 @@ def spec(name: str) -> QuerySpec:
         raise KeyError(
             f"unknown graph query {name!r}; known: {sorted(CATALOGUE)}"
         ) from None
+
+
+# --------------------------------------------------------------- statistics
+# A backend is free to compute a statistic however its engine prefers, right up
+# until two backends compute it *differently* -- at which point the same
+# investigation produces two different evidence strings and the catalogue stops
+# being a contract.  That happened: pandas' `quantile` interpolates linearly
+# between the two neighbouring observations, while the GSQL path picked the
+# nearest observed amount, so `card_profile` reported a 95th percentile of
+# $424.99 on TigerGraph and $425.08 on the local mirror for the same card.
+#
+# So the definition lives here, with the contract, and both backends call it.
+
+def quantile_nearest(sorted_values: list[float], p: float) -> float:
+    """The catalogue's one definition of a quantile: nearest observed value.
+
+    ``sorted_values`` must be sorted ascending.  The result is always a value
+    the card actually transacted, which is what makes the evidence sentence
+    ("95% of this card's history is at or below $425.08") literally true --
+    an interpolated percentile is a number that never occurred.
+    """
+    n = len(sorted_values)
+    if n == 0:
+        return 0.0
+    idx = int(round(p * (n - 1)))
+    return float(sorted_values[min(n - 1, max(0, idx))])
+
+
+# ------------------------------------------------- case-memory retrieval rule
+# `similar_closed_cases` used to be scored by each backend in its own way:
+# GSQL ranked by `abs(exposure - amount)`, the local mirror by
+# `|log(exposure/amount)|` plus burst-size and channel terms.  Two different
+# ranking functions behind one catalogue name is not a contract, and it showed
+# up as two different prior cases being cited as evidence for the same alert.
+#
+# The rule is therefore split into two stages that both backends implement:
+#
+#   1. CANDIDATES -- the engine filters by pattern and returns the
+#      `CANDIDATE_POOL` cases whose exposure is closest to the alert amount,
+#      ties broken by case_id.  This is the only part the engine does, and it
+#      exists so neither backend has to ship thousands of rows over the wire.
+#   2. RANKING -- `rank_similar_cases` below, run client-side on that pool by
+#      whichever backend served it.  Identical input, identical output.
+CANDIDATE_POOL = 400
+
+
+def rank_similar_cases(
+    cases: list[dict], *, channel: str | None, amount: float | None,
+    n_txns: int | None, limit: int,
+) -> list[dict]:
+    """Rank candidate closed cases against the current alert.
+
+    Exposure is compared in log space, so "$40 against a $45 alert" scores far
+    better than "$4,000 against a $4,005 alert" -- a fraud of similar *size*
+    is the comparable one, not one that happens to differ by the same dollars.
+
+    The sort key ends in ``case_id`` on purpose.  Without a total order, tied
+    cases come back in whatever order the engine walked its vertices, and the
+    two backends then cite different prior cases as evidence.
+    """
+    import math
+
+    scored: list[tuple[float, str, dict]] = []
+    for c in cases:
+        score = 0.0
+        exposure = float(c.get("exposure_usd") or 0.0)
+        if amount is not None and amount > 0:
+            score -= abs(math.log((exposure + 1.0) / (float(amount) + 1.0)))
+        if n_txns:
+            score -= abs(float(c.get("n_txns") or 0) - float(n_txns)) * 0.4
+        notes = str(c.get("analyst_notes") or "")
+        if channel == "online" and "nline" in notes:
+            score += 0.5
+        elif channel == "in_person" and ("Card-present" in notes or "card-present" in notes):
+            score += 0.5
+        scored.append((score, str(c.get("case_id") or ""), c))
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    return [c for _, _, c in scored[: int(limit)]]

@@ -254,9 +254,15 @@ CREATE QUERY closed_cases_for_region(STRING region_id) FOR GRAPH FraudInvestigat
 CREATE QUERY similar_closed_cases(STRING pattern, STRING channel, DOUBLE amount,
                                   INT n_txns, INT lim = 8) FOR GRAPH FraudInvestigation {
   Start = {ClosedCase.*};
+  /* Stage 1 of the catalogue's case-memory rule: filter by pattern, keep the
+     candidates whose exposure is nearest the alert amount, and break ties by
+     case_id so the pool is the same set the local mirror builds.  The actual
+     ranking is stage 2 and runs client-side (queries.rank_similar_cases) --
+     deliberately NOT here, because two engines ranking independently is what
+     made the two backends cite different prior cases for the same alert. */
   CC = SELECT cc FROM Start:cc
        WHERE (pattern == "" OR cc.pattern == pattern)
-       ORDER BY abs(cc.exposure_usd - amount) ASC
+       ORDER BY abs(cc.exposure_usd - amount) ASC, cc.case_id ASC
        LIMIT lim;
   PRINT CC AS cases;
 }

@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import PATHS
+from .queries import CANDIDATE_POOL, quantile_nearest, rank_similar_cases
 
 _LOAD_LOCK = threading.Lock()
 
@@ -205,6 +206,7 @@ class LocalMirrorBackend:
                 "regions": [], "product_codes": [], "device_profiles": [], "channels": {},
             }
         amt = hist.TransactionAmt.astype(float)
+        amounts = sorted(float(a) for a in amt)
         regions = (
             hist.addr1.dropna().value_counts().head(25).rename_axis("region_id")
             .reset_index(name="n")
@@ -228,10 +230,14 @@ class LocalMirrorBackend:
             "n_txns": int(len(hist)),
             "first_ts": _clean(hist.ts.min()),
             "last_ts": _clean(hist.ts.max()),
+            # quantile_nearest, not amt.quantile: the catalogue owns this
+            # definition so the two backends cannot report different
+            # percentiles for the same card. See queries.quantile_nearest.
             "amount": {
-                "min": float(amt.min()), "p25": float(amt.quantile(0.25)),
-                "median": float(amt.median()), "p75": float(amt.quantile(0.75)),
-                "p95": float(amt.quantile(0.95)), "max": float(amt.max()),
+                "min": float(amt.min()), "p25": quantile_nearest(amounts, 0.25),
+                "median": quantile_nearest(amounts, 0.5),
+                "p75": quantile_nearest(amounts, 0.75),
+                "p95": quantile_nearest(amounts, 0.95), "max": float(amt.max()),
                 "mean": float(amt.mean()), "std": float(amt.std(ddof=0)) if len(amt) > 1 else 0.0,
                 "total": float(amt.sum()),
             },
@@ -436,33 +442,38 @@ class LocalMirrorBackend:
     def similar_closed_cases(
         self, pattern: str | None = None, channel: str | None = None,
         amount: float | None = None, n_txns: int | None = None, limit: int = 8,
+        as_of: str | None = None, exclude_case_ids: tuple = (),
     ) -> dict:
-        """Case-memory retrieval scored on pattern, exposure band and burst size."""
+        """Case-memory retrieval: the catalogue's two-stage rule, verbatim.
+
+        Stage 1 (candidates) is what a real engine would do server-side; stage
+        2 is ``rank_similar_cases``, shared with the TigerGraph backend so the
+        two cannot rank the same pool differently.
+        """
         d = _Data.get()
-        cand = d.closed.copy()
+        cand = self._as_of(d.closed.copy(), as_of)
         if pattern:
             cand = cand[cand.pattern == pattern]
-        if cand.empty:
-            cand = self._as_of(d.closed.copy(), as_of)
-            if exclude_case_ids:
-                cand = cand[~cand.case_id.isin(set(exclude_case_ids))]
-        score = pd.Series(0.0, index=cand.index)
-        if amount is not None and amount > 0:
-            ratio = (cand.exposure_usd.astype(float) + 1.0) / (float(amount) + 1.0)
-            score -= (np.log(ratio).abs()).fillna(5.0)
-        if n_txns:
-            score -= (cand.n_txns.astype(float) - float(n_txns)).abs() * 0.4
-        if channel == "online":
-            score += cand.analyst_notes.str.contains("nline", na=False).astype(float) * 0.5
-        elif channel == "in_person":
-            score += cand.analyst_notes.str.contains("Card-present|card-present", na=False, regex=True).astype(float) * 0.5
-        cand = cand.assign(_score=score).sort_values("_score", ascending=False).head(int(limit))
+        if exclude_case_ids:
+            cand = cand[~cand.case_id.isin(set(exclude_case_ids))]
+        # stage 1: nearest exposure to the alert amount, ties by case_id
+        gap = (cand.exposure_usd.astype(float) - float(amount or 0.0)).abs()
+        cand = (cand.assign(_gap=gap)
+                    .sort_values(["_gap", "case_id"], ascending=[True, True])
+                    .head(CANDIDATE_POOL)
+                    .drop(columns=["_gap"]))
+        pool = _records(
+            cand.drop(columns=["txn_id_list", "connected_card_list", "action_list"],
+                      errors="ignore")
+        )
+        # stage 2: the shared ranking
+        ranked = rank_similar_cases(
+            pool, channel=channel, amount=amount, n_txns=n_txns, limit=limit,
+        )
         return {
             "query": {"pattern": pattern, "channel": channel, "amount": amount, "n_txns": n_txns},
-            "n": int(len(cand)),
-            "cases": _records(
-                cand.drop(columns=["txn_id_list", "connected_card_list", "action_list"], errors="ignore")
-            ),
+            "n": len(ranked),
+            "cases": ranked,
         }
 
     # ------------------------------------------------------------- writing

@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any
 
 from ..config import TG
+from .queries import CANDIDATE_POOL, quantile_nearest, rank_similar_cases
 
 DT = "%Y-%m-%d %H:%M:%S"
 
@@ -200,13 +201,7 @@ class TigerGraphBackend:
             return {"card_id": card_id, "before": str(before_ts), "n_txns": 0, "empty": True,
                     "regions": [], "product_codes": [], "device_profiles": [], "channels": {}}
         amounts = sorted(float(a) for a in (_first(res, "amounts", []) or []))
-
-        def q(p: float) -> float:
-            if not amounts:
-                return 0.0
-            i = min(len(amounts) - 1, max(0, int(round(p * (len(amounts) - 1)))))
-            return amounts[i]
-
+        q = lambda p: quantile_nearest(amounts, p)  # noqa: E731 - shared definition
         total = _num(_first(res, "total_amt", 0.0))
         mean = total / n if n else 0.0
         var = sum((a - mean) ** 2 for a in amounts) / n if n else 0.0
@@ -431,15 +426,25 @@ class TigerGraphBackend:
                              amount: float | None = None, n_txns: int | None = None,
                              limit: int = 8, as_of: str | None = None,
                              exclude_case_ids: tuple = ()) -> dict:
+        # stage 1 happens in GSQL (nearest exposure, ties by case_id, capped at
+        # CANDIDATE_POOL); stage 2 is the catalogue's shared ranking, so this
+        # backend and the local mirror cannot order the same pool differently.
         res = self._run("similar_closed_cases", {
             "pattern": pattern or "", "channel": channel or "",
-            "amount": float(amount or 0.0), "n_txns": int(n_txns or 1), "lim": int(limit),
+            "amount": float(amount or 0.0), "n_txns": int(n_txns or 1),
+            "lim": CANDIDATE_POOL,
         })
         cases = self._cases(_first(res, "cases", []))
+        if as_of:
+            cases = [c for c in cases if str(c.get("closed_at") or "") < str(as_of)]
         if exclude_case_ids:
             cases = [c for c in cases if c["case_id"] not in set(exclude_case_ids)]
-        return {"query": {"pattern": pattern, "channel": channel, "amount": amount},
-                "n": len(cases), "cases": cases}
+        ranked = rank_similar_cases(
+            cases, channel=channel, amount=amount, n_txns=n_txns, limit=limit,
+        )
+        return {"query": {"pattern": pattern, "channel": channel, "amount": amount,
+                          "n_txns": n_txns},
+                "n": len(ranked), "cases": ranked}
 
     # ------------------------------------------------------------- writing
     def write_case(self, case: dict) -> dict:

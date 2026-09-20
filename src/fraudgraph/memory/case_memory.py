@@ -73,7 +73,14 @@ class CaseMemory:
             for c in (res or {}).get("cases", []) or []:
                 take(c, f"same typology ({best.pattern.value}) and comparable exposure", 0.5)
 
-        ranked = sorted(out.values(), key=lambda c: -c["_score"])
+        # The sort key ends in case_id because everything above assigns scores
+        # from a small fixed set -- every "prior case on this exact card" gets
+        # 1.0 -- so ties are the rule, not the exception.  A stable sort then
+        # preserves insertion order, which is the order the *backend* returned
+        # its rows in, and the top-ranked prior case (the one that reaches the
+        # answer file as evidence) changes with the backend.  It did: the same
+        # alert cited CC-2935 on TigerGraph and CC-1589 on the local mirror.
+        ranked = sorted(out.values(), key=lambda c: (-c["_score"], str(c.get("case_id") or "")))
         for c in ranked:
             c.pop("_score", None)
         return ranked[:limit]
