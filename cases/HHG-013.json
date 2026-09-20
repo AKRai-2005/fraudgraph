@@ -98,7 +98,7 @@
       "CC-0258",
       "CC-0414"
     ],
-    "summary": "Transaction 3526826 on card C07671-K2 for $35.66 on 2016-12-09 02:39:29 scored 0.76 and is assessed as fraud with a probability of 0.71, indicating an account_takeover pattern with an exposure of $35.66. The online purchase involved a device profile never seen on this card among 13 previously seen devices and was marked new for the account, while online transactions account for 1.5% of the card's history. Activity occurred on both channels within 48 hours with 2 identity anomalies (new device=True, device marked New=True, match flag=n/a, proxy=none, new email domain=False), alongside matching closed cases CC-3761, CC-4294, CC-3216, and CC-1475. The recommended action is CREATE_CASE (auto).",
+    "summary": "Risk score on card C07671-K2: $35.66 online on 2016-12-09, scored 0.76 by the bank's model. Online purchase from a device profile never seen on this card (13 devices previously seen), marked new for the account. Online accounts for only 1.5% of this card's history. Activity on both channels within 48 hours with 2 identity anomalies (new device=true, device marked new=true, match flag=n/a, proxy=none, new email domain=false). Case memory returned 6 comparable closed investigation(s) (CC-3761, CC-4294, CC-3216), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.71 on 3 independent signals, with exposure $35.66 across 1 transaction(s). Recommended: CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-013"
   },
@@ -130,6 +130,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 12,
-  "tokens": 1099,
-  "latency_s": 3.68
+  "tokens": 0,
+  "latency_s": 3.34
 }

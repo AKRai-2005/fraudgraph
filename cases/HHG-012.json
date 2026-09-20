@@ -66,14 +66,14 @@
       "CC-2370",
       "CC-0003"
     ],
-    "summary": "Transaction 3553342 on card C05876-K2 for $30.91 on 2016-12-18 04:00:31 received a score of 0.55 from the bank's model. This in_person transaction under product code W aligns with the card's established behavior, where in_person accounts for 93% of history, product code W accounts for 93% of history, and the amount is at or below the 95th-percentile of $226.05 out of 910 prior transactions, including 21 in billing region 494. Case memory shows two comparable closed investigations (CC-2370 and CC-0003) on this card, and the remaining uncertainty involves a single signal of prior confirmed fraud where policy R1 applies. The transaction is assessed as legitimate with a fraud probability of 0.02 and pattern none, resulting in $0.00 exposure. The recommended actions are CREATE_CASE (auto), ALLOW_TRANSACTION (auto), and CLOSE_NO_FRAUD (auto).",
+    "summary": "Risk score on card C05876-K2: $30.91 in-person on 2016-12-18, scored 0.55 by the bank's model. $30.91 is at or below the card's 95th-percentile amount ($226.05); in_person is 93% of this card's history; 21 prior transactions in billing region 494; product code w is 93% of this card's history. Case memory returned 2 comparable closed investigation(s) (CC-2370, CC-0003), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.02; the bank model's score of 0.55 is not corroborated by the graph. Recommended: CREATE_CASE (auto), ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-012"
   },
   "evidence_requests": [
     {
       "type": "customer_validation",
-      "asked_after_step": 8,
+      "asked_after_step": 7,
       "assumed_response": "Simulated response: the cardholder confirms the transaction as their own."
     }
   ],
@@ -129,6 +129,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 1057,
-  "latency_s": 2.33
+  "tokens": 0,
+  "latency_s": 2.31
 }

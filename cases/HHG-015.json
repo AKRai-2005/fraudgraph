@@ -78,7 +78,7 @@
       "CC-4295",
       "CC-2661"
     ],
-    "summary": "Transaction 3464869 on card C03042-K1 for $599.94 online on 2016-11-17 14:03:36 received a score of 0.77 from the bank's model and involved a device profile never seen before among the 25 previously recorded devices on this account. Past investigations on this card include closed cases CC-3886, CC-1313, CC-0615, and CC-4140. The transaction has been assessed as legitimate with a fraud probability of 0.23 and no detected pattern. The recommended actions are ALLOW_TRANSACTION (auto) and CLOSE_NO_FRAUD (auto).",
+    "summary": "Risk score on card C03042-K1: $599.94 online on 2016-11-17, scored 0.77 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-3886, CC-1313, CC-0615), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.23; the bank model's score of 0.77 is not corroborated by the graph. Recommended: ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-015"
   },
@@ -120,6 +120,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
-  "tokens": 948,
-  "latency_s": 3.38
+  "tokens": 0,
+  "latency_s": 3.44
 }

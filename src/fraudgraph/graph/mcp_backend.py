@@ -43,6 +43,7 @@ RUN_QUERY_TOOL = "tigergraph__run_installed_query"
 VERTEX_COUNT_TOOL = "tigergraph__get_vertex_count"
 ADD_NODE_TOOL = "tigergraph__add_node"
 ADD_EDGE_TOOL = "tigergraph__add_edge"
+DELETE_NODE_TOOL = "tigergraph__delete_node"
 
 
 #: A suspended Savanna workspace answers every REST call with a 500 whose body
@@ -239,7 +240,9 @@ for _name in (
     "closed_cases_for_region", "similar_closed_cases", "read_cases",
 ):
     setattr(MCPGraphBackend, _name, getattr(TigerGraphBackend, _name))
-setattr(MCPGraphBackend, "_cases", TigerGraphBackend._cases)
+# _cases is a staticmethod; accessing it on the class yields the bare function,
+# so it must be re-wrapped or `self` arrives as its first positional argument.
+setattr(MCPGraphBackend, "_cases", staticmethod(TigerGraphBackend._cases))
 setattr(MCPGraphBackend, "_run", lambda self, q, p=None: self._query(q, p or {}))
 
 
@@ -265,6 +268,18 @@ def _write_case(self, case: dict) -> dict:
     """Persist an AgentCase through MCP's node/edge tools."""
     gid = case["graph_case_id"]
     try:
+        # See tigergraph.py: clear the previous write BEFORE recreating the
+        # vertex. tigergraph__delete_edges needs both endpoints so it cannot
+        # clear by source vertex; deleting the case vertex drops its edges in
+        # one call. Doing it after the add would wipe the attributes just
+        # written and let the edges recreate an empty vertex.
+        try:
+            self._tool(DELETE_NODE_TOOL, {
+                "graph_name": TG.graph, "vertex_type": "AgentCase", "vertex_id": gid,
+            })
+        except Exception:  # noqa: BLE001 - a first write has nothing to clear
+            pass
+
         self._tool(ADD_NODE_TOOL, {
             "graph_name": TG.graph, "vertex_type": "AgentCase", "vertex_id": gid,
             "attributes": {
@@ -287,6 +302,7 @@ def _write_case(self, case: dict) -> dict:
                 "source": "agent",
             },
         })
+
         edges = [("CASE_ON_CARD", "PaymentCard", case.get("card_id", ""))]
         edges += [("CASE_INVESTIGATES", "Transaction", str(t))
                   for t in case.get("affected_txn_ids", [])]
@@ -314,21 +330,28 @@ def _write_case(self, case: dict) -> dict:
             edges.append(("CASE_CONTAINS_EVIDENCE", "CaseEvidence", eid))
             n_ev += 1
         written_edges = 0
+        failed_edges: list[str] = []
         for etype, tgt_type, tgt in edges:
             if not tgt:
                 continue
             try:
-                self._tool(ADD_EDGE_TOOL, {
+                res = self._tool(ADD_EDGE_TOOL, {
                     "graph_name": TG.graph,
                     "source_vertex_type": "AgentCase", "source_vertex_id": gid,
                     "edge_type": etype,
                     "target_vertex_type": tgt_type, "target_vertex_id": tgt,
                 })
+                # the server reports failure in the payload, not by raising
+                if isinstance(res, dict) and res.get("success") is False:
+                    raise RuntimeError(str(res.get("error") or res.get("summary"))[:160])
                 written_edges += 1
-            except Exception:  # noqa: BLE001 - a missing endpoint must not fail the case
-                continue
+            except Exception as exc:  # noqa: BLE001 - one edge must not fail the case
+                # recorded rather than swallowed: a silently dropped edge makes
+                # the graph disagree with the answer file it came from
+                failed_edges.append(f"{etype}->{tgt_type}:{str(tgt)[:40]} ({exc})"[:220])
         return {"written": True, "graph_case_id": gid, "backend": self.name,
-                "evidence_vertices": n_ev, "edges": written_edges, "transport": "mcp"}
+                "evidence_vertices": n_ev, "edges": written_edges,
+                "failed_edges": failed_edges, "transport": "mcp"}
     except Exception as exc:  # noqa: BLE001
         return {"written": False, "backend": self.name, "error": str(exc)[:300]}
 

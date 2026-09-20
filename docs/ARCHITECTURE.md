@@ -36,10 +36,16 @@ together are the audit trail the dashboard shows and the answer file counts.
 ### `graph/` — one catalogue, two backends
 
 `graph/queries.py` is the contract: 17 named queries with declared parameters
-and a stated purpose. Two backends implement it:
+and a stated purpose. Three backends implement it:
 
 * `graph/tigergraph.py` — installed GSQL queries, the system of record
+* `graph/mcp_backend.py` — the same queries through the official
+  `tigergraph-mcp` server, so the agent's graph access is genuine MCP tool use
 * `graph/local_mirror.py` — pandas over the parquet cache
+
+All three have been run over the full 20-case pack and produce identical
+answers. That is the point of having them: a finding that survives three
+independent code paths is not an artefact of one.
 
 `graph/store.py` dispatches by name, records every call (name, params, backend,
 duration, ok/error, result summary) and turns a query into the `ref` string that

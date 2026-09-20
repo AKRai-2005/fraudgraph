@@ -29,7 +29,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Stopping conditions work | done | `tests/test_scenarios.py::test_scenario_stopping_rules` |
 | Decisions explained and recorded | done | timeline + tool ledger persisted per case in `build/case_records/` |
 | LLM integrated for reasoning and narrative | done | Gemini `gemini-flash-lite-latest`; 22 calls, 24,912 tokens across the 20 cases, 0 rate-limited |
-| TigerGraph MCP integration | code complete, not yet exercised | `FG_GRAPH_BACKEND=mcp` routes the whole catalogue through `tigergraph__run_installed_query`; see the note below |
+| TigerGraph MCP integration | done | all 20 cases run end to end through `tigergraph-mcp` (69 tools): `--backend mcp` gives the same 10 fraud / 7 legitimate / 3 uncertain and 216 graph calls as the direct backend, and writes all 20 cases back |
 
 ## Policy and cases
 
@@ -86,14 +86,23 @@ and its output inspected. Regenerate the evidence with the commands shown.
 
 ## Note on TigerGraph MCP
 
-`FG_GRAPH_BACKEND=mcp` runs the whole query catalogue through the official
-`tigergraph-mcp` server over stdio, calling `tigergraph__run_installed_query`
-for every query and `tigergraph__add_node` / `tigergraph__add_edge` to write a
-case. The tool names were taken from the server's own documentation, and
-`available_tools()` reports what the running server actually offers so a
-mismatch surfaces as a recorded failure rather than a silent one.
+`FG_GRAPH_BACKEND=mcp` (or `--backend mcp`) runs the whole query catalogue
+through the official `tigergraph-mcp` server over stdio: every catalogue query
+goes out as `tigergraph__run_installed_query`, and a case is written with
+`tigergraph__delete_node` / `add_node` / `add_edge`.
 
-It is written and imports cleanly, but the 20-case run reported here was made
-through the direct TigerGraph backend, so the MCP path has not been exercised
-end to end against the live workspace. That is stated rather than glossed:
-"code complete, not yet exercised" is the honest status.
+All 20 cases have been run this way against the live Savanna workspace. The
+result is identical to the direct backend -- same verdicts, same patterns, same
+216 graph calls -- and `scripts/verify_graph_cases.py` confirms every case in
+the graph matches its answer file in content, not just in edge counts.
+
+**Three backends, one catalogue.** The local mirror, the direct TigerGraph
+driver and MCP all implement `fraudgraph/graph/queries.py` and all produce the
+same 20 answers. That agreement is the check: a result that appears on all
+three is not an artefact of one code path.
+
+Exercising it against a real server found four things that reading the docs had
+not, all now fixed and covered by `tests/test_mcp_backend.py`: guessed tool
+argument names, a parser that swallowed `success: false`, an inherited empty
+`TG_PASSWORD` that broke authentication, and a teardown that tripped anyio's
+cancel scope.

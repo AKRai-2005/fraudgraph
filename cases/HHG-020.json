@@ -80,7 +80,7 @@
       "CC-1349",
       "CC-4559"
     ],
-    "summary": "Transaction 3509359 on card C12265-K2 for $125.08 occurred online on 2016-12-03 06:04:26 under product code R and scored 0.52 by the bank's model. Product code R has never been used on this card, and online transactions account for only 4.9% of the card's history of 82 transactions. Case memory reveals prior investigations on this card, including confirmed fraud cases CC-2277 and CC-2447, alongside cleared cases CC-1447 and CC-0487 which share the device profile Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1920x1080. The verdict is uncertain at a probability of 0.40 with pattern none and exposure $0.00, and the recommended action is CREATE_CASE (auto).",
+    "summary": "Risk score on card C12265-K2: $125.08 online on 2016-12-03, scored 0.52 by the bank's model. Product code r never used on this card; online accounts for only 4.9% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2277, CC-2447, CC-1447), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.40 with confidence 0.79; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-020"
   },
@@ -112,6 +112,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
-  "tokens": 1015,
-  "latency_s": 3.52
+  "tokens": 0,
+  "latency_s": 3.33
 }

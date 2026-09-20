@@ -131,19 +131,19 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-2649 (confirmed_fraud, pattern undocumented, exposure $390.04) matches this alert on transactions in that case came from the same device profile 'SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080'; same typology (undocumented) and comparable exposure.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
-        "entity_ids": [
-          "CC-2649"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-2971 (confirmed_fraud, pattern undocumented, exposure $108.36) matches this alert on transactions in that case came from the same device profile 'SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080'; same typology (undocumented) and comparable exposure.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
         "entity_ids": [
           "CC-2971"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2649 (confirmed_fraud, pattern undocumented, exposure $390.04) matches this alert on transactions in that case came from the same device profile 'SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080'; same typology (undocumented) and comparable exposure.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=undocumented, channel=online)",
+        "entity_ids": [
+          "CC-2649"
         ]
       },
       {
@@ -165,13 +165,13 @@
     ],
     "similar_prior_cases": [
       "CC-2985",
-      "CC-2649",
       "CC-2971",
+      "CC-2649",
       "CC-3035",
       "CC-4086",
       "CC-3841"
     ],
-    "summary": "Transaction 3478561 on card C13487-K1 for $74.96 on 2016-11-22 16:11:00 is assessed as fraud with a probability of 0.98, despite scoring 0.05 on the bank's model, driven by 3 independent signals including an online channel anomaly and a device profile shared across 28 unrelated cards behind an anonymous proxy. The case shares characteristics with closed cases CC-2985, CC-2649, CC-2971, and CC-3035, resulting in an exposure of $439.61. Recommended actions are BLOCK_CARD (L1), MONITOR_CARD (auto), MONITOR_CONNECTED_CARDS (auto), CREATE_CASE (auto), FILE_REPORT (L2), and ESCALATE_TO_ANALYST (auto).",
+    "summary": "Analyst request on card C13487-K1: $74.96 online on 2016-11-22, scored 0.05 by the bank's model. Device profile shared by 28 unrelated cards within 30 days, marked new for 100% of the transactions it ever appears on, and consistently behind ip_proxy:anonymous. Online accounts for only 2.8% of this card's history. Activity on both channels within 48 hours with 2 identity anomalies (new device=false, device marked new=true, match flag=match_status:2, proxy=ip_proxy:anonymous, new email domain=false). Case memory returned 6 comparable closed investigation(s) (CC-2985, CC-2971, CC-2649), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.98 on 3 independent signals, with exposure $439.61 across 3 transaction(s). Recommended: BLOCK_CARD (L1), MONITOR_CARD (auto), MONITOR_CONNECTED_CARDS (auto), CREATE_CASE (auto), FILE_REPORT (L2), ESCALATE_TO_ANALYST (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-014"
   },
@@ -246,7 +246,7 @@
   "sar": {
     "file": true,
     "reason": "3a: fraud is strongly suspected (probability 0.98) and the activity connects to a shared device profile spanning 28 cards; the pattern is coordinated and fits no documented typology (R9)",
-    "narrative": "Customer C13487, holder of card C13487-K1, was associated with fraudulent activity identified on 2016-11-22 16:11:00 involving transaction 3478561 for the amount of $74.96. The online transaction was conducted under product code C and routed through an anonymous IP proxy. The suspicion arises from graph analysis showing that the device profile 'SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080' was shared across 28 unrelated cards within 30 days and was marked New for 100% of the transactions it ever appeared on. This device history links the event to confirmed fraud in closed cases CC-2985, CC-2649, CC-2971, and CC-3035. The activity sharply deviates from the card's established behavior where online transactions accounted for only 3% of 71 prior transactions with a median of $55.92 and a maximum of $225.94. Although the bank's model scored the transaction at 0.05, the deterministic graph analysis established a fraud probability of 0.98 with a total exposure of $439.61 under an undocumented pattern. Any customer response was simulated. Recommended actions include blocking card C13487-K1, monitoring the card and connected cards, creating a case, filing a report, and escalating to an analyst.",
+    "narrative": "Customer C13487, holder of card C13487-K1. Between 2016-11-15 and 2016-11-26, 3 transaction(s) totalling $439.61 were identified as part of a single suspected fraud episode, beginning with transaction 3460634. The activity was conducted online under product code C, billed in region 191, from device profile 'SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080'. Device profile shared by 28 unrelated cards within 30 days, marked new for 100% of the transactions it ever appears on, and consistently behind ip_proxy:anonymous. The cardholder's established profile over 71 prior transactions shows a median amount of $55.92 and a maximum of $225.94. The same device profile was used on 27 other cardholders' cards inside the same window, indicating a common actor across multiple customers rather than an isolated compromise. Closed investigation(s) CC-2985, CC-2971, CC-2649 record comparable activity previously confirmed by this institution. The institution's detection model scored the flagged transaction only 0.05; the suspicion arises from the relationship evidence, not from the model score. The institution's recommended disposition is: BLOCK_CARD, MONITOR_CARD, MONITOR_CONNECTED_CARDS, CREATE_CASE, FILE_REPORT, ESCALATE_TO_ANALYST. Actions requiring team-lead or fraud-manager approval are recorded as awaiting approval and have not been executed.",
     "subjects": [
       "C01289-K1",
       "C01996-K2",
@@ -270,6 +270,6 @@
   },
   "stop_reason": "Fraud probability 0.98 is at or above 0.85 with 3 independent pieces of evidence (policy 6).",
   "tool_calls": 13,
-  "tokens": 3323,
-  "latency_s": 3.52
+  "tokens": 0,
+  "latency_s": 3.62
 }

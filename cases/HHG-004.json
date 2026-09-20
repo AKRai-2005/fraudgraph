@@ -48,19 +48,19 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-0696 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
-        "entity_ids": [
-          "CC-0696"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-1736 (confirmed_fraud, pattern card_not_present_fraud, exposure $9.90) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
         "entity_ids": [
           "CC-1736"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0696 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
+        "entity_ids": [
+          "CC-0696"
         ]
       },
       {
@@ -74,13 +74,13 @@
     ],
     "similar_prior_cases": [
       "CC-3778",
-      "CC-0696",
       "CC-1736",
+      "CC-0696",
       "CC-2121",
       "CC-3764",
       "CC-3532"
     ],
-    "summary": "Transaction 3583227 on card C08106-K1 (customer C08106) for $128.33 on 2016-12-29 01:53:54 was online under product code C and scored 0.34 by the bank's model. This card_not_present_new_device pattern features an online purchase from a device profile never seen on this card (25 devices previously seen), marked New for the account, alongside case memory matches for closed cases CC-3778, CC-0696, CC-1736, and CC-2121. The verdict is fraud with a probability of 0.80 and an exposure of $128.33. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
+    "summary": "Customer report on card C08106-K1: $128.33 online on 2016-12-29, scored 0.34 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-3778, CC-1736, CC-0696), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 3 independent signals, with exposure $128.33 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-004"
   },
@@ -122,6 +122,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
-  "tokens": 964,
-  "latency_s": 2.75
+  "tokens": 0,
+  "latency_s": 2.6
 }

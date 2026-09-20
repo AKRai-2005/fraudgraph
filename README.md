@@ -126,7 +126,10 @@ python -m fraudgraph.ingest.tg_load --queries
 python -m fraudgraph.ingest.tg_load --check
 ```
 
-Then `FG_GRAPH_BACKEND=tigergraph` makes it the system of record. The console's
+Then `FG_GRAPH_BACKEND=tigergraph` makes it the system of record, or
+`FG_GRAPH_BACKEND=mcp` routes the same queries through the official
+`tigergraph-mcp` server instead (`pip install tigergraph-mcp`). Both have been
+run over the full case pack and give identical answers. The console's
 status strip always shows which backend answered, and the answer files record
 it per evidence item.
 

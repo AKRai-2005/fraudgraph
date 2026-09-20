@@ -17,6 +17,14 @@ from ..config import TG
 
 DT = "%Y-%m-%d %H:%M:%S"
 
+#: Every edge an AgentCase owns. Cleared before a re-write so the graph always
+#: reflects the case's current conclusions rather than the union of every run.
+CASE_EDGE_TYPES = (
+    "CASE_INVESTIGATES", "CASE_ON_CARD", "CASE_CONNECTED_TO",
+    "CASE_CONTAINS_EVIDENCE", "CASE_MATCHES_PATTERN", "CASE_FROM_DEVICE",
+    "CASE_CITES_PRIOR", "CASE_APPLIES_RULE",
+)
+
 
 def _conn():
     """Build a pyTigerGraph connection.
@@ -442,6 +450,18 @@ class TigerGraphBackend:
         """
         gid = case["graph_case_id"]
         try:
+            # Clear the previous write BEFORE recreating the vertex. Edge
+            # upserts are keyed on (from, to), so without this a re-run keeps
+            # both runs' citations. Dropping the vertex drops its edges too.
+            # Order matters: doing this *after* the upsert deletes the vertex
+            # just written, and the edges below then recreate it implicitly
+            # with every attribute blank -- which still passes an edge-count
+            # check, so the content is verified too.
+            try:
+                self._conn.delVerticesById("AgentCase", gid)
+            except Exception:  # noqa: BLE001 - a first write has nothing to clear
+                pass
+
             self._conn.upsertVertex("AgentCase", gid, {
                 "case_id": case.get("case_id", ""),
                 "status": case.get("status", ""), "verdict": case.get("verdict", ""),
@@ -461,6 +481,7 @@ class TigerGraphBackend:
                 "n_affected_txns": len(case.get("affected_txn_ids", [])),
                 "source": case.get("source", "agent"),
             })
+
             edges: list[tuple] = []
             for t in case.get("affected_txn_ids", []):
                 edges.append(("AgentCase", gid, "CASE_INVESTIGATES", "Transaction", str(t), {}))

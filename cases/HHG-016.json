@@ -58,31 +58,31 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-2765 (confirmed_fraud, pattern card_not_present_fraud, exposure $87.90) matches this alert on transactions in that case came from the same device profile 'Windows | unknown | edge 16.0 | unknown'.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
-        "entity_ids": [
-          "CC-2765"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-2675 (confirmed_fraud, pattern card_not_present_new_device, exposure $87.85) matches this alert on transactions in that case came from the same device profile 'Windows | unknown | edge 16.0 | unknown'.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
         "entity_ids": [
           "CC-2675"
         ]
+      },
+      {
+        "claim": "Case memory: closed case CC-2694 (confirmed_fraud, pattern card_not_present_new_device, exposure $574.52) matches this alert on transactions in that case came from the same device profile 'Windows | unknown | edge 16.0 | unknown'.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-2694"
+        ]
       }
     ],
     "similar_prior_cases": [
       "CC-2898",
       "CC-3491",
-      "CC-2765",
       "CC-2675",
       "CC-2694",
-      "CC-3580"
+      "CC-3580",
+      "CC-2540"
     ],
-    "summary": "Transaction 3534820 on card C09988-K1 for $59.67 occurred online on 2016-12-11 22:39:08 under product code C, scoring 0.37 by the bank's model. While the amount is consistent with the card's history and online channel usage, the transaction shares the device profile 'Windows | unknown | edge 16.0 | unknown' with closed confirmed fraud cases CC-2898, CC-3491, CC-2765, and CC-2675. This is assessed as fraud with a probability of 0.73 and a pattern of card_not_present_new_device, resulting in an exposure of $59.67 across 1 transaction. The recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
+    "summary": "Customer report on card C09988-K1: $59.67 online on 2016-12-11, scored 0.37 by the bank's model. $59.67 is at or below the card's 95th-percentile amount ($85.78); online is 100% of this card's history; product code c is 100% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2898, CC-3491, CC-2675), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.73 on 2 independent signals, with exposure $59.67 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-016"
   },
@@ -124,6 +124,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
-  "tokens": 1115,
-  "latency_s": 2.85
+  "tokens": 0,
+  "latency_s": 3.22
 }
