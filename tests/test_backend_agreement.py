@@ -290,3 +290,37 @@ def test_local_and_tigergraph_agree_on_the_full_answer():
     for a, b in zip(run(get_local_backend()), run(tg)):
         compare_answers(a, b, a["case_id"], res)
     assert res.agree, res.report()
+
+
+# ------------------------------------------------ prose vs evidence drift
+def test_llm_written_fields_are_named_but_not_excluded():
+    """The narrator's prose is non-deterministic; the facts under it are not.
+
+    These fields stay in the comparison -- compare_backends.py runs with the
+    narrator off, where they are template output and must match exactly -- but
+    a caller that knows the narrator was on can separate "the wording changed"
+    from "the evidence changed".
+    """
+    from fraudgraph.benchmark.compare import LLM_WRITTEN, is_llm_written
+
+    assert is_llm_written("case.summary")
+    assert is_llm_written("sar.narrative")
+    assert not is_llm_written("case.evidence[3].claim")
+    assert not is_llm_written("case.fraud_probability")
+    for path in LLM_WRITTEN:
+        assert path not in EXPECTED_TO_DIFFER, \
+            f"{path} must still be compared, not excluded"
+
+
+def test_a_reworded_summary_is_not_reported_as_an_evidence_difference():
+    res = ComparisonResult("published", "re-run")
+    compare_answers(
+        {"case": {"summary": "The card was used abroad.", "fraud_probability": 0.8}},
+        {"case": {"summary": "This card saw overseas use.", "fraud_probability": 0.8}},
+        "HHG-001", res,
+    )
+    from fraudgraph.benchmark.compare import is_llm_written
+
+    assert not res.agree, "the comparison itself must still see it"
+    assert all(is_llm_written(d.path) for d in res.differences), \
+        "only prose should have changed"

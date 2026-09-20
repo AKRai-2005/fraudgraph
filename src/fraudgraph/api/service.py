@@ -510,18 +510,26 @@ class CaseService:
         published = self.published_answer(case_id)
         if published is None:
             return {"published": False, "matches": None, "differences": []}
-        from ..benchmark.compare import ComparisonResult, compare_answers
+        from ..benchmark.compare import ComparisonResult, compare_answers, is_llm_written
 
         res = ComparisonResult("published", "this run")
         compare_answers(published, working, case_id, res)
+        prose = [d for d in res.differences if is_llm_written(d.path)]
+        facts = [d for d in res.differences if not is_llm_written(d.path)]
         return {
             "published": True,
             "matches": res.agree,
+            # "2 fields differ" reads as a problem next to a perfectly correct
+            # re-run whose only change is that the narrator sampled different
+            # wording. Separated, so the console can say which happened.
+            "facts_match": not facts,
+            "n_prose_differences": len(prose),
+            "prose_fields": sorted({d.path for d in prose}),
             "differences": [
                 {"path": d.path, "published": _jsonable(d.left), "current": _jsonable(d.right)}
-                for d in res.differences[:40]
+                for d in facts[:40]
             ],
-            "n_differences": len(res.differences),
+            "n_differences": len(facts),
             "expected_differences": sorted({d.path.split("[")[0] for d in res.ignored}),
         }
 

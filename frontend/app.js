@@ -616,16 +616,24 @@ function provenanceBanner(rec) {
       ${when ? '&middot; generated ' + esc(when) : ''}
       &middot; <span class="muted">cases/${esc(rec.case_id)}.json</span></div>`;
   }
-  const matches = drift.matches === true;
+  // The narrator samples its wording, so a perfectly correct re-run differs on
+  // case.summary and sar.narrative while agreeing on every fact underneath.
+  // Reported as "2 field(s) differ" that reads like a problem, so prose drift
+  // and evidence drift are said separately.
+  const factsMatch = drift.facts_match !== false;
+  const prose = drift.n_prose_differences || 0;
   const rows = (drift.differences || []).slice(0, 6).map((d) =>
     `<li><span class="p">${esc(d.path)}</span><br>${esc(String(d.published).slice(0, 90))}
      &rarr; ${esc(String(d.current).slice(0, 90))}</li>`).join('');
-  return `<div class="provenance ${matches ? '' : 'drifted'}">
+  const verdictText = factsMatch
+    ? (prose
+        ? `evidence identical to the published answer; ${prose} narrated field(s) reworded by the LLM`
+        : 'identical to the published answer')
+    : `<b>${drift.n_differences || 0} evidence field(s) differ</b> from the published answer`;
+  return `<div class="provenance ${factsMatch ? '' : 'drifted'}">
     <div>Live re-run &middot; served by ${backend || '<b>?</b>'} ${when ? '&middot; ' + esc(when) : ''}
-      &middot; ${matches
-        ? 'identical to the published answer'
-        : `<b>${drift.n_differences || 0} field(s) differ</b> from the published answer`}
-      ${matches ? '' : `<ul class="drift-list">${rows}</ul>`}
+      &middot; ${verdictText}
+      ${factsMatch ? '' : `<ul class="drift-list">${rows}</ul>`}
       <div class="muted" style="margin-top:4px">The file in cases/ is unchanged; re-runs never write to it.</div>
     </div></div>`;
 }

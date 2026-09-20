@@ -40,6 +40,19 @@ EXPECTED_TO_DIFFER: dict[str, str] = {
 }
 
 
+# Fields the LLM narrator writes. They are prose, and sampling makes them
+# non-deterministic run to run, so a re-run with the narrator on differs here
+# while agreeing on every fact underneath. They are NOT excluded from the
+# comparison -- `compare_backends.py` runs with the narrator off, where they
+# are template output and must match exactly -- but a caller that knows the
+# narrator was on can tell "the wording changed" from "the evidence changed".
+LLM_WRITTEN: frozenset[str] = frozenset({"case.summary", "sar.narrative"})
+
+
+def is_llm_written(path: str) -> bool:
+    return _strip_indices(path).lstrip(".") in LLM_WRITTEN
+
+
 @dataclass
 class Difference:
     case_id: str
