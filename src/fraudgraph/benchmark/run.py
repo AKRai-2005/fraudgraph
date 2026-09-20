@@ -57,7 +57,12 @@ def run_all(backend: str = "auto", use_llm: bool = True, only: list[str] | None 
         (out_dir / f"{trig.case_id}.json").write_text(
             json.dumps(answer.to_answer_dict(), indent=2), encoding="utf-8"
         )
-        _write_internal(answer)
+        _write_internal(answer, provenance={
+            "kind": "published",
+            "backend": agent.store.backend_name,
+            "llm": bool(use_llm and getattr(agent.narrator, "enabled", False)),
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
         results.append(answer)
         c = answer.case
         print(

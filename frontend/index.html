@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <header class="topbar">
   <div class="brand">
     <span class="mark"></span>
@@ -18,15 +19,15 @@
   <div class="status-strip" id="statusStrip"></div>
 </header>
 
-<nav class="tabs" id="tabs">
-  <button data-view="overview" class="active">Overview</button>
-  <button data-view="queue">Investigation queue</button>
-  <button data-view="case">Case workspace</button>
-  <button data-view="memory">Case memory</button>
-  <button data-view="model">Model &amp; policy</button>
+<nav class="tabs" id="tabs" role="tablist" aria-label="Console sections">
+  <button data-view="overview" class="active" role="tab" aria-selected="true" aria-controls="view-overview">Overview</button>
+  <button data-view="queue" role="tab" aria-selected="false" aria-controls="view-queue">Investigation queue</button>
+  <button data-view="case" role="tab" aria-selected="false" aria-controls="view-case">Case workspace</button>
+  <button data-view="memory" role="tab" aria-selected="false" aria-controls="view-memory">Case memory</button>
+  <button data-view="model" role="tab" aria-selected="false" aria-controls="view-model">Model &amp; policy</button>
 </nav>
 
-<main>
+<main id="main">
   <!-- ============================ OVERVIEW ============================ -->
   <section id="view-overview" class="view active">
     <section class="panel hero" aria-labelledby="divergenceTitle">
@@ -38,7 +39,7 @@
             When the two differ, the evidence is the reason &mdash; click any point
             to read it.</p>
         </div>
-        <div class="hero-stats" id="divergenceStats"></div>
+        <div class="hero-stats" id="divergenceStats"><div class="sk sk-stat"></div><div class="sk sk-stat"></div><div class="sk sk-stat"></div></div>
       </div>
       <div class="chart-wrap">
         <svg id="divergenceChart" role="img"
@@ -49,13 +50,13 @@
       <div id="divergenceCallouts" class="callouts"></div>
     </section>
 
-    <div class="kpi-grid" id="kpis"></div>
+    <div class="kpi-grid" id="kpis"><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div></div>
     <div class="two-col">
       <div class="panel">
         <h2>Assessed fraud probability</h2>
         <p class="panel-hint">Distribution across investigated alerts. The agent's own
           assessment, not the bank model's score.</p>
-        <div id="riskDist" class="dist"></div>
+        <div id="riskDist" class="dist"><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div></div>
       </div>
       <div class="panel">
         <h2>Verdicts and patterns</h2>

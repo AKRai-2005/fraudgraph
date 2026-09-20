@@ -29,13 +29,52 @@ function toast(msg, ms = 3200) {
   toast._t = setTimeout(() => { t.style.display = 'none'; }, ms);
 }
 
+/* An error the user can act on: what failed, why, and a way to retry --
+ * rather than a permanently shimmering skeleton. */
+function showError(viewSel, title, detail, retry) {
+  const view = $(viewSel);
+  if (!view) return;
+  clearError(viewSel);
+  const box = document.createElement('div');
+  box.className = 'errorbox';
+  box.innerHTML = `<div class="msg"><b>${esc(title)}</b>${esc(detail || '')}</div>`;
+  if (retry) {
+    const b = document.createElement('button');
+    b.className = 'btn small';
+    b.textContent = 'Retry';
+    b.addEventListener('click', () => { clearError(viewSel); retry(); });
+    box.appendChild(b);
+  }
+  view.prepend(box);
+}
+
+function clearError(viewSel) {
+  const view = $(viewSel);
+  if (view) $$('.errorbox', view).forEach((n) => n.remove());
+}
+
 const probColor = (p) => p >= 0.7 ? 'var(--fraud)' : p >= 0.3 ? 'var(--uncertain)' : 'var(--legit)';
 
 /* =========================================================== navigation */
-$$('#tabs button').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
+const TABS = $$('#tabs button');
+TABS.forEach((b, i) => {
+  b.addEventListener('click', () => show(b.dataset.view));
+  b.addEventListener('keydown', (ev) => {
+    const step = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0;
+    if (!step) return;
+    ev.preventDefault();
+    const next = TABS[(i + step + TABS.length) % TABS.length];
+    next.focus();
+    show(next.dataset.view);
+  });
+});
 
 function show(view) {
-  $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+  $$('#tabs button').forEach((b) => {
+    const on = b.dataset.view === view;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
   $$('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
   if (view === 'memory') loadMemory();
   if (view === 'model') loadModel();
@@ -68,7 +107,15 @@ async function loadHealth() {
 /* ============================================================ overview */
 async function loadOverview() {
   let o;
-  try { o = await api('/api/overview'); } catch (e) { return; }
+  try {
+    o = await api('/api/overview');
+  } catch (e) {
+    // this used to `return` silently, leaving the skeletons shimmering for
+    // ever with no indication that anything had gone wrong
+    showError('#view-overview', 'Could not load the overview', e.message, loadOverview);
+    return;
+  }
+  clearError('#view-overview');
   $('#kpis').innerHTML = [
     kpi(o.cases_investigated, 'Investigations', `${o.total_alerts_in_pack} alerts in the case pack`),
     kpi(o.closed_fraud, 'Closed &ndash; fraud', 'verdict fraud, evidence sufficient'),
@@ -152,7 +199,15 @@ function drawDivergence(d) {
       'No scored alerts have been investigated yet.'));
     return;
   }
-  const W = 1000, H = 430, M = { t: 22, r: 24, b: 50, l: 58 };
+  // The viewBox is scaled to the container, so a fixed 1000-unit width means
+  // 11-unit text renders at under 4px on a phone. Narrow screens get their own
+  // geometry: fewer units across, so every unit is worth more pixels.
+  const narrow = (svg.clientWidth || 800) < 560;
+  const W = narrow ? 460 : 1000;
+  const H = narrow ? 430 : 430;
+  const M = narrow ? { t: 16, r: 14, b: 44, l: 42 } : { t: 22, r: 24, b: 50, l: 58 };
+  const FS = narrow ? { tick: 13, axis: 13, hint: 0, label: 14 }
+                    : { tick: 11, axis: 12, hint: 10.5, label: 11.5 };
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const iw = W - M.l - M.r, ih = H - M.t - M.b;
@@ -177,21 +232,25 @@ function drawDivergence(d) {
     const v = i / 5;
     g.appendChild(el('line', { x1: X(0), y1: Y(v), x2: X(1), y2: Y(v), stroke: 'var(--line-soft)', 'stroke-width': 1 }));
     g.appendChild(el('line', { x1: X(v), y1: Y(0), x2: X(v), y2: Y(1), stroke: 'var(--line-soft)', 'stroke-width': 1 }));
-    g.appendChild(el('text', { x: M.l - 10, y: Y(v) + 4, fill: 'var(--text-faint)', 'font-size': 11, 'text-anchor': 'end' }, v.toFixed(1)));
-    g.appendChild(el('text', { x: X(v), y: H - M.b + 18, fill: 'var(--text-faint)', 'font-size': 11, 'text-anchor': 'middle' }, v.toFixed(1)));
+    if (narrow && i % 2) continue;   // every other tick, or they collide
+    g.appendChild(el('text', { x: M.l - 8, y: Y(v) + 4, fill: 'var(--text-faint)', 'font-size': FS.tick, 'text-anchor': 'end' }, v.toFixed(1)));
+    g.appendChild(el('text', { x: X(v), y: H - M.b + 20, fill: 'var(--text-faint)', 'font-size': FS.tick, 'text-anchor': 'middle' }, v.toFixed(1)));
   }
-  g.appendChild(el('text', { x: M.l + iw / 2, y: H - 10, fill: 'var(--text-dim)', 'font-size': 12, 'text-anchor': 'middle' },
-    "Bank model's risk score at the time of the alert"));
-  const yl = el('text', { x: 14, y: M.t + ih / 2, fill: 'var(--text-dim)', 'font-size': 12, 'text-anchor': 'middle' },
-    "Agent's assessed probability");
-  yl.setAttribute('transform', `rotate(-90 14 ${M.t + ih / 2})`);
+  g.appendChild(el('text', { x: M.l + iw / 2, y: H - 8, fill: 'var(--text-dim)', 'font-size': FS.axis, 'text-anchor': 'middle' },
+    narrow ? "Bank model's risk score" : "Bank model's risk score at the time of the alert"));
+  const ylx = narrow ? 13 : 14;
+  const yl = el('text', { x: ylx, y: M.t + ih / 2, fill: 'var(--text-dim)', 'font-size': FS.axis, 'text-anchor': 'middle' },
+    narrow ? "Agent's probability" : "Agent's assessed probability");
+  yl.setAttribute('transform', `rotate(-90 ${ylx} ${M.t + ih / 2})`);
   g.appendChild(yl);
 
   // quadrant hints
-  g.appendChild(el('text', { x: X(0.02), y: Y(0.86), fill: 'var(--text-faint)', 'font-size': 10.5 },
-    'low score, high evidence — the model missed it'));
-  g.appendChild(el('text', { x: X(0.98), y: Y(0.14), fill: 'var(--text-faint)', 'font-size': 10.5, 'text-anchor': 'end' },
-    'high score, no evidence — a false alarm'));
+  if (!narrow) {
+    g.appendChild(el('text', { x: X(0.02), y: Y(0.86), fill: 'var(--text-faint)', 'font-size': FS.hint },
+      'low score, high evidence — the model missed it'));
+    g.appendChild(el('text', { x: X(0.98), y: Y(0.14), fill: 'var(--text-faint)', 'font-size': FS.hint, 'text-anchor': 'end' },
+      'high score, no evidence — a false alarm'));
+  }
 
   // points
   const tip = $('#divergenceTip');
@@ -210,7 +269,7 @@ function drawDivergence(d) {
       }));
     }
     node.appendChild(el('circle', {
-      cx, cy, r: far ? 8 : 6,
+      cx, cy, r: narrow ? (far ? 9 : 7) : (far ? 8 : 6),
       fill: VERDICT_COLOR[p.verdict] || 'var(--text-faint)',
       'fill-opacity': far ? 0.9 : 0.5,
       stroke: 'var(--bg)', 'stroke-width': 1.5,
@@ -247,7 +306,7 @@ function drawDivergence(d) {
     const cx = X(p.bank_risk_score), cy = Y(p.fraud_probability);
     const below = p.fraud_probability > 0.5;   // room underneath a high point
     g.appendChild(el('text', {
-      x: cx, y: cy + (below ? 24 : -16), 'font-size': 11.5, 'font-weight': 600,
+      x: cx, y: cy + (below ? 26 : -18), 'font-size': FS.label, 'font-weight': 600,
       fill: VERDICT_COLOR[p.verdict] || 'var(--text)',
       'text-anchor': 'middle', 'pointer-events': 'none',
     }, p.case_id));
@@ -312,23 +371,31 @@ function renderQueue() {
     if (y == null) return -1;
     return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y))) * dir;
   });
+  // data-label drives the mobile card layout: under 900px each cell prints
+  // its own heading, because a 12-column analyst table cannot shrink to 320px
+  // and remain a table
   $('#queueTable tbody').innerHTML = rows.map((r) => `
-    <tr data-case="${esc(r.case_id)}">
-      <td class="mono">${esc(r.case_id)}</td>
-      <td><span class="tag">${esc((r.trigger_type || '').replace('_', ' '))}</span></td>
-      <td class="mono">${esc(r.card_id)}</td>
-      <td class="num">${r.bank_risk_score == null ? '&mdash;' : Number(r.bank_risk_score).toFixed(2)}</td>
-      <td class="num"><span class="prob"><i class="swatch" style="background:${probColor(r.fraud_probability)}"></i>${Number(r.fraud_probability).toFixed(2)}</span></td>
-      <td class="num">${r.confidence == null ? '&mdash;' : Number(r.confidence).toFixed(2)}</td>
-      <td><span class="tag ${esc(r.verdict)}">${esc(r.verdict)}</span></td>
-      <td>${esc(r.pattern)}</td>
-      <td class="num">${r.exposure_usd ? money(r.exposure_usd) : '&mdash;'}</td>
-      <td class="mono">${esc(r.next_action || '&mdash;')}</td>
-      <td>${(r.awaiting_approval || []).length ? `<span class="tag L1">${r.awaiting_approval.length} pending</span>` : '<span class="muted">&mdash;</span>'}</td>
-      <td class="muted">${esc(String(r.last_updated || '').slice(0, 16).replace('T', ' '))}</td>
+    <tr data-case="${esc(r.case_id)}" tabindex="0" role="button"
+        aria-label="Open case ${esc(r.case_id)}, ${esc(r.verdict)}">
+      <td class="mono" data-label="Case">${esc(r.case_id)}</td>
+      <td data-label="Trigger"><span class="tag">${esc((r.trigger_type || '').replace('_', ' '))}</span></td>
+      <td class="mono" data-label="Card">${esc(r.card_id)}</td>
+      <td class="num" data-label="Bank score">${r.bank_risk_score == null ? '&mdash;' : Number(r.bank_risk_score).toFixed(2)}</td>
+      <td class="num" data-label="Agent p(fraud)"><span class="prob"><i class="swatch" style="background:${probColor(r.fraud_probability)}"></i>${Number(r.fraud_probability).toFixed(2)}</span></td>
+      <td class="num" data-label="Confidence">${r.confidence == null ? '&mdash;' : Number(r.confidence).toFixed(2)}</td>
+      <td data-label="Verdict"><span class="tag ${esc(r.verdict)}">${esc(r.verdict)}</span></td>
+      <td data-label="Pattern">${esc(r.pattern)}</td>
+      <td class="num" data-label="Exposure">${r.exposure_usd ? money(r.exposure_usd) : '&mdash;'}</td>
+      <td class="mono" data-label="Next action">${esc(r.next_action || '&mdash;')}</td>
+      <td data-label="Approval">${(r.awaiting_approval || []).length ? `<span class="tag L1">${r.awaiting_approval.length} pending</span>` : '<span class="muted">&mdash;</span>'}</td>
+      <td class="muted" data-label="Updated">${esc(String(r.last_updated || '').slice(0, 16).replace('T', ' '))}</td>
     </tr>`).join('') || '<tr><td colspan="12" class="muted" style="padding:24px;text-align:center">No cases match this filter.</td></tr>';
-  $$('#queueTable tbody tr[data-case]').forEach((tr) =>
-    tr.addEventListener('click', () => openCase(tr.dataset.case)));
+  $$('#queueTable tbody tr[data-case]').forEach((tr) => {
+    tr.addEventListener('click', () => openCase(tr.dataset.case));
+    tr.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openCase(tr.dataset.case); }
+    });
+  });
 }
 
 ['#queueSearch', '#queueStatus', '#queueVerdict', '#queueApproval'].forEach((s) =>
@@ -388,6 +455,7 @@ function renderCase(rec) {
   const sar = a.sar || {};
 
   const left = `
+    ${provenanceBanner(rec)}
     <div class="panel">
       <div class="panel-head">
         <h2>${esc(rec.case_id)} &middot; <span class="tag ${esc(c.verdict)}">${esc(c.verdict)}</span>
@@ -533,6 +601,35 @@ function renderCase(rec) {
   $('#caseBody').innerHTML = `<div>${left}</div><div>${right}</div>`;
   wireApprovals();
   loadGraph(rec.case_id);
+}
+
+/* Which record is on screen, and whether it still matches what was submitted.
+ * A re-run is a working copy: it never edits cases/, so the two can differ --
+ * most obviously when the graph is unreachable and the local mirror answered
+ * instead. Saying so beats quietly showing a different answer. */
+function provenanceBanner(rec) {
+  const prov = rec.provenance || { kind: 'published' };
+  const drift = rec.drift || {};
+  const when = String(prov.at || rec.generated_at || '').slice(0, 19).replace('T', ' ');
+  const backend = prov.backend ? `<b>${esc(prov.backend)}</b>` : '';
+  if (prov.kind !== 'rerun') {
+    return `<div class="provenance">Published answer file
+      ${backend ? '&middot; served by ' + backend : ''}
+      ${when ? '&middot; generated ' + esc(when) : ''}
+      &middot; <span class="muted">cases/${esc(rec.case_id)}.json</span></div>`;
+  }
+  const matches = drift.matches === true;
+  const rows = (drift.differences || []).slice(0, 6).map((d) =>
+    `<li><span class="p">${esc(d.path)}</span><br>${esc(String(d.published).slice(0, 90))}
+     &rarr; ${esc(String(d.current).slice(0, 90))}</li>`).join('');
+  return `<div class="provenance ${matches ? '' : 'drifted'}">
+    <div>Live re-run &middot; served by ${backend || '<b>?</b>'} ${when ? '&middot; ' + esc(when) : ''}
+      &middot; ${matches
+        ? 'identical to the published answer'
+        : `<b>${drift.n_differences || 0} field(s) differ</b> from the published answer`}
+      ${matches ? '' : `<ul class="drift-list">${rows}</ul>`}
+      <div class="muted" style="margin-top:4px">The file in cases/ is unchanged; re-runs never write to it.</div>
+    </div></div>`;
 }
 
 const fact = (l, v, color) =>
@@ -874,3 +971,14 @@ async function loadModel() {
   await loadOverview();
   setInterval(loadHealth, 30000);
 })();
+
+let _chartResize;
+window.addEventListener('resize', () => {
+  clearTimeout(_chartResize);
+  _chartResize = setTimeout(() => {
+    if (state.divergence && $('#view-overview').classList.contains('active')) {
+      drawDivergence(state.divergence);
+    }
+    if (state.graph && state.current) drawGraph(state.graph);
+  }, 180);
+});
