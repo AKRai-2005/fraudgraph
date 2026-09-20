@@ -138,7 +138,9 @@ class TigerGraphBackend:
                 "graph": TG.graph,
             }
         except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "backend": self.name, "error": str(exc)[:300]}
+            from .mcp_backend import _explain
+
+            return {"ok": False, "backend": self.name, "error": _explain(str(exc))}
 
     # --------------------------------------------------------------- queries
     def txn_detail(self, txn_id: int | str) -> dict:

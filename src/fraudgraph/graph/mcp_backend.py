@@ -30,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import threading
 from typing import Any
 
@@ -42,6 +43,46 @@ RUN_QUERY_TOOL = "tigergraph__run_installed_query"
 VERTEX_COUNT_TOOL = "tigergraph__get_vertex_count"
 ADD_NODE_TOOL = "tigergraph__add_node"
 ADD_EDGE_TOOL = "tigergraph__add_edge"
+
+
+#: A suspended Savanna workspace answers every REST call with a 500 whose body
+#: is an HTML "Failed to start workspace" page. Surfaced raw that reads like a
+#: bug in the query; it is an operational state with a one-click fix.
+_STOPPED_MARKERS = ("failed to start workspace", "auto start is not enabled")
+
+
+def _explain(error: str) -> str:
+    low = error.lower()
+    if any(m in low for m in _STOPPED_MARKERS) or "500" in low:
+        return (
+            f"{error[:180]} -- this usually means the Savanna workspace is stopped. "
+            "Start it at https://savanna.tgcloud.io (Workspaces -> your workspace -> Start) "
+            "and retry; auto-start is off by default."
+        )
+    return error[:300]
+
+
+def _parse_payload(raw: str):
+    """Pull the structured JSON out of an MCP text block.
+
+    tigergraph-mcp wraps its response in a markdown fence and then repeats a
+    human-readable summary after it, so ``json.loads`` on the whole string
+    fails. Falling back to ``{"text": raw}`` silently hid ``success: false``:
+    a query that returned HTTP 500 looked like an empty result rather than an
+    error, which is exactly the failure mode that must never be silent.
+    """
+    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.S)
+    candidates = [fence.group(1)] if fence else []
+    candidates.append(raw)
+    brace = re.search(r"\{.*\}", raw, re.S)
+    if brace:
+        candidates.append(brace.group(0))
+    for c in candidates:
+        try:
+            return json.loads(c)
+        except json.JSONDecodeError:
+            continue
+    return None
 
 
 class _Loop:
@@ -92,23 +133,22 @@ class MCPGraphBackend:
             from mcp import StdioServerParameters
             from mcp.client.stdio import stdio_client
 
-            env = dict(os.environ)
-            # The three variables tigergraph-mcp documents for Savanna are
-            # TG_HOST, TG_SECRET and TG_GRAPHNAME; username/password is the
-            # self-hosted path.
-            env.update({
-                "TG_HOST": TG.host,
-                "TG_GRAPHNAME": TG.graph,
-                "TG_SSL_PORT": TG.rest_port,
-                "TG_TGCLOUD": "true" if TG.use_tls else "false",
-            })
+            # Start from an environment with every TG_* variable stripped.
+            # python-dotenv has already loaded this project's .env into
+            # os.environ, which includes an empty TG_PASSWORD for the Savanna
+            # path -- and an empty password reaching the server alongside a
+            # secret breaks its authentication. tigergraph-mcp documents
+            # exactly three variables for Savanna, so exactly three are sent.
+            env = {k: v for k, v in os.environ.items() if not k.startswith("TG_")}
+            env["TG_HOST"] = TG.host
+            env["TG_GRAPHNAME"] = TG.graph
             if TG.secret:
                 env["TG_SECRET"] = TG.secret
+            elif TG.token:
+                env["TG_API_TOKEN"] = TG.token
             else:
                 env["TG_USERNAME"] = TG.username or "tigergraph"
                 env["TG_PASSWORD"] = TG.password
-            if TG.token:
-                env["TG_API_TOKEN"] = TG.token
             params = StdioServerParameters(command=MCP_SERVER_CMD, args=[], env=env)
             read, write = await self._exit_stack.enter_async_context(stdio_client(params))
 
@@ -121,11 +161,30 @@ class MCPGraphBackend:
         return list(self._tools)
 
     def close(self) -> None:
+        """Tear the session down on the loop thread that created it.
+
+        anyio ties a cancel scope to the task that entered it, so closing the
+        exit stack from another task raises "Attempted to exit cancel scope in
+        a different task". Scheduling the close onto the same loop and then
+        stopping it avoids that; a failure here is logged, not raised, because
+        losing a subprocess on shutdown must not fail an investigation.
+        """
         try:
             if self._exit_stack is not None:
-                self._loop.run(self._exit_stack.aclose(), timeout=20)
+                try:
+                    self._loop.run(self._exit_stack.aclose(), timeout=20)
+                except Exception:  # noqa: BLE001 - best-effort teardown
+                    pass
         finally:
+            self._exit_stack = None
+            self._session = None
             self._loop.close()
+
+    def __del__(self):  # pragma: no cover - interpreter shutdown
+        try:
+            self.close()
+        except Exception:  # noqa: BLE001
+            pass
 
     # ---------------------------------------------------------------- call
     async def _acall(self, tool: str, args: dict) -> Any:
@@ -138,10 +197,8 @@ class MCPGraphBackend:
         raw = "\n".join(chunks).strip()
         if not raw:
             return getattr(result, "structuredContent", None) or {}
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            return {"text": raw}
+        parsed = _parse_payload(raw)
+        return parsed if parsed is not None else {"text": raw}
 
     def _tool(self, tool: str, args: dict) -> Any:
         if tool not in self._tools:
@@ -159,9 +216,8 @@ class MCPGraphBackend:
         })
         if isinstance(payload, dict):
             if payload.get("success") is False:
-                raise RuntimeError(
-                    f"{name}: {payload.get('error') or 'MCP reported failure'}"
-                )
+                err = str(payload.get("error") or payload.get("summary") or "MCP reported failure")
+                raise RuntimeError(f"{name}: {_explain(err)}")
             data = payload.get("data", payload)
             if isinstance(data, dict):
                 for key in ("results", "result", "output"):
@@ -210,7 +266,7 @@ def _write_case(self, case: dict) -> dict:
     gid = case["graph_case_id"]
     try:
         self._tool(ADD_NODE_TOOL, {
-            "graph_name": TG.graph, "node_type": "AgentCase", "node_id": gid,
+            "graph_name": TG.graph, "vertex_type": "AgentCase", "vertex_id": gid,
             "attributes": {
                 "case_id": case.get("case_id", ""),
                 "status": case.get("status", ""), "verdict": case.get("verdict", ""),
@@ -247,7 +303,7 @@ def _write_case(self, case: dict) -> dict:
         for i, ev in enumerate(case.get("evidence", [])):
             eid = f"{gid}-E{i:02d}"
             self._tool(ADD_NODE_TOOL, {
-                "graph_name": TG.graph, "node_type": "CaseEvidence", "node_id": eid,
+                "graph_name": TG.graph, "vertex_type": "CaseEvidence", "vertex_id": eid,
                 "attributes": {
                     "claim": (ev.get("claim") or "")[:4000],
                     "ev_source": ev.get("source", ""),
@@ -263,8 +319,10 @@ def _write_case(self, case: dict) -> dict:
                 continue
             try:
                 self._tool(ADD_EDGE_TOOL, {
-                    "graph_name": TG.graph, "src_node_type": "AgentCase", "src_node_id": gid,
-                    "edge_type": etype, "tgt_node_type": tgt_type, "tgt_node_id": tgt,
+                    "graph_name": TG.graph,
+                    "source_vertex_type": "AgentCase", "source_vertex_id": gid,
+                    "edge_type": etype,
+                    "target_vertex_type": tgt_type, "target_vertex_id": tgt,
                 })
                 written_edges += 1
             except Exception:  # noqa: BLE001 - a missing endpoint must not fail the case

@@ -134,7 +134,8 @@ def _write_internal(answer: AnswerFile) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Run the 20 benchmark cases")
-    ap.add_argument("--backend", default="auto", choices=["auto", "local", "tigergraph"])
+    ap.add_argument("--backend", default="auto",
+                    choices=["auto", "local", "tigergraph", "mcp"])
     ap.add_argument("--no-llm", action="store_true", help="skip the LLM narrator")
     ap.add_argument("--only", nargs="*", help="run only these case ids")
     args = ap.parse_args(argv)
