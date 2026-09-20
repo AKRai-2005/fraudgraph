@@ -1,18 +1,20 @@
 {
   "case_id": "HHG-016",
   "case": {
-    "status": "open",
-    "verdict": "uncertain",
-    "fraud_probability": 0.407,
-    "pattern": "none",
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.731,
+    "pattern": "card_not_present_new_device",
     "pattern_description": "",
-    "affected_txn_ids": [],
-    "first_suspicious_txn_id": "",
+    "affected_txn_ids": [
+      "3534820"
+    ],
+    "first_suspicious_txn_id": "3534820",
     "connected_card_ids": [],
     "connected_device_profiles": [
       "Windows | unknown | edge 16.0 | unknown"
     ],
-    "exposure_usd": 0.0,
+    "exposure_usd": 59.67,
     "evidence": [
       {
         "claim": "Flagged transaction 3534820 on card C09988-K1: $59.67 online under product code C on 2016-12-11 22:39:08, scored 0.37 by the bank's model.",
@@ -80,7 +82,7 @@
       "CC-2732",
       "CC-2765"
     ],
-    "summary": "Customer report on card C09988-K1: $59.67 online on 2016-12-11, scored 0.37 by the bank's model. $59.67 is at or below the card's 95th-percentile amount ($83.68); online is 100% of this card's history; product code c is 100% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-0497, CC-2540, CC-2675), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.41 with confidence 0.56; the evidence does not yet settle the question. Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Customer report on card C09988-K1: $59.67 online on 2016-12-11, scored 0.37 by the bank's model. $59.67 is at or below the card's 95th-percentile amount ($83.68); online is 100% of this card's history; product code c is 100% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-0497, CC-2540, CC-2675), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.73 on 2 independent signals, with exposure $59.67 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -90,7 +92,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: cardholder denies the transaction; exposure $0.00 is within the $2,500 L1 limit"
+        "reason": "R2: cardholder denies the transaction; exposure $59.67 is within the $2,500 L1 limit"
       },
       {
         "action": "CREATE_CASE",
@@ -102,7 +104,7 @@
       {
         "action": "BLOCK_CARD",
         "route": "L1",
-        "reason": "R2: cardholder denies the transaction; exposure $0.00 is within the $2,500 L1 limit"
+        "reason": "R2: cardholder denies the transaction; exposure $59.67 is within the $2,500 L1 limit"
       },
       {
         "action": "CREATE_CASE",
@@ -114,7 +116,7 @@
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud is strongly suspected but exposure $0.00 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "reason": "3a: fraud is strongly suspected but exposure $59.67 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
@@ -123,5 +125,5 @@
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
   "tokens": 0,
-  "latency_s": 0.19
+  "latency_s": 0.18
 }

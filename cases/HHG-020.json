@@ -1,20 +1,18 @@
 {
   "case_id": "HHG-020",
   "case": {
-    "status": "closed_fraud",
-    "verdict": "fraud",
-    "fraud_probability": 0.971,
-    "pattern": "card_not_present_fraud",
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.397,
+    "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": [
-      "3509359"
-    ],
-    "first_suspicious_txn_id": "3509359",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
     "connected_card_ids": [],
     "connected_device_profiles": [
       "Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1920x1080"
     ],
-    "exposure_usd": 125.08,
+    "exposure_usd": 0.0,
     "evidence": [
       {
         "claim": "Flagged transaction 3509359 on card C12265-K2: $125.08 online under product code R on 2016-12-03 06:04:26, scored 0.52 by the bank's model.",
@@ -82,7 +80,7 @@
       "CC-1815",
       "CC-2650"
     ],
-    "summary": "Risk score on card C12265-K2: $125.08 online on 2016-12-03, scored 0.52 by the bank's model. Product code r never used on this card; online accounts for only 4.9% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2277, CC-2447, CC-0487), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.97 on 3 independent signals, with exposure $125.08 across 1 transaction(s). Recommended: BLOCK_CARD (L1), MONITOR_CARD (auto), CREATE_CASE (auto).",
+    "summary": "Risk score on card C12265-K2: $125.08 online on 2016-12-03, scored 0.52 by the bank's model. Product code r never used on this card; online accounts for only 4.9% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2277, CC-2447, CC-0487), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.40 with confidence 0.79; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -90,50 +88,30 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2 by analogy: assessed probability 0.97 with 3 independent signals supports blocking the card; exposure $125.08"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.97 reaches the 0.30 case threshold"
+        "reason": "3a: assessed fraud probability 0.40 reaches the 0.30 case threshold"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2 by analogy: assessed probability 0.97 with 3 independent signals supports blocking the card; exposure $125.08"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.97 reaches the 0.30 case threshold"
+        "reason": "3a: assessed fraud probability 0.40 reaches the 0.30 case threshold"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud is strongly suspected but exposure $125.08 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "reason": "3a: fraud is not confirmed or strongly suspected (probability 0.40), so no regulatory filing is due. A case may still be opened.",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Fraud probability 0.97 is at or above 0.85 with 3 independent pieces of evidence (policy 6).",
+  "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
   "tokens": 0,
-  "latency_s": 0.24
+  "latency_s": 0.2
 }

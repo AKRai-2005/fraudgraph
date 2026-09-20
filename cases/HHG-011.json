@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.723,
+    "fraud_probability": 0.802,
     "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
@@ -80,7 +80,7 @@
       "CC-2673",
       "CC-2799"
     ],
-    "summary": "Customer report on card C11923-K2: $131.30 online on 2016-12-29, scored 0.39 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-0031, CC-0290, CC-1056), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.72 on 3 independent signals, with exposure $131.30 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Customer report on card C11923-K2: $131.30 online on 2016-12-29, scored 0.39 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-0031, CC-0290, CC-1056), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 3 independent signals, with exposure $131.30 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -123,5 +123,5 @@
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
   "tokens": 0,
-  "latency_s": 0.46
+  "latency_s": 0.53
 }

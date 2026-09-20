@@ -162,7 +162,10 @@ class PolicyEngine:
         # waits until the denial is corroborated or the probability rises.
         if single_signal and p < R.R1_PROBABILITY_THRESHOLD:
             cite("R1")
-            if not r7_applies:
+            # Ask only while the question is still open. Once the cardholder has
+            # answered, repeating the request in the final recommendation would
+            # contradict the answer we are acting on.
+            if not r7_applies and s.customer_response_denied is None and not s.asked_customer:
                 add(Action.VERIFY_WITH_CUSTOMER,
                     f"R1: assessed probability {p:.2f} rests on "
                     f"{s.independent_signal_count} signal; verify before any block")
@@ -299,6 +302,16 @@ class PolicyEngine:
         ):
             del chosen[Action.CLOSE_NO_FRAUD]
             notes.append("CLOSE_NO_FRAUD dropped: incompatible with a block or a filing")
+        if Action.ESCALATE_TO_ANALYST in chosen:
+            # Handing the case to a human and closing it in the same breath is a
+            # contradiction: if the evidence conflicts, the analyst decides.
+            for a in (Action.CLOSE_NO_FRAUD, Action.ALLOW_TRANSACTION):
+                if a in chosen:
+                    del chosen[a]
+                    notes.append(
+                        f"{a.value} dropped: the case is being escalated, so the disposition is "
+                        "the analyst's to make"
+                    )
         if Action.ALLOW_TRANSACTION in chosen and (
             Action.DECLINE_TRANSACTION in chosen or Action.BLOCK_CARD in chosen
         ):

@@ -3,8 +3,8 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.723,
-    "pattern": "none",
+    "fraud_probability": 0.802,
+    "pattern": "account_takeover",
     "pattern_description": "",
     "affected_txn_ids": [
       "3491361"
@@ -80,7 +80,7 @@
       "CC-1450",
       "CC-1699"
     ],
-    "summary": "Customer report on card C02354-K2: $39.08 in-person on 2016-11-27, scored 0.48 by the bank's model. $39.08 is at or below the card's 95th-percentile amount ($445.09); in_person is 92% of this card's history; 565 prior transactions in billing region 126; product code w is 92% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-0255, CC-0405, CC-0454), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.72 on 2 independent signals, with exposure $39.08 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Customer report on card C02354-K2: $39.08 in-person on 2016-11-27, scored 0.48 by the bank's model. $39.08 is at or below the card's 95th-percentile amount ($445.09); in_person is 92% of this card's history; 565 prior transactions in billing region 126; product code w is 92% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-0255, CC-0405, CC-0454), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 2 independent signals, with exposure $39.08 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -123,5 +123,5 @@
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
   "tokens": 0,
-  "latency_s": 0.37
+  "latency_s": 0.35
 }

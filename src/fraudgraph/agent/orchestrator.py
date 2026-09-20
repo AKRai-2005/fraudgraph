@@ -525,7 +525,7 @@ class InvestigationAgent:
             exposure=episode.exposure,
             independent_signal_count=risk.independent_signal_count,
             conflicting_evidence=bool(risk.conflicting_evidence),
-            pattern=self._pattern(st, risk),
+            pattern=self._pattern(st, risk, feats),
             pattern_is_undocumented=bool(undocumented),
             coordinated_across_customers=bool(shared and shared.describes_ring),
             trigger_type=tr.trigger_type,
@@ -552,13 +552,40 @@ class InvestigationAgent:
             return Verdict.LEGITIMATE
         return Verdict.UNCERTAIN
 
-    def _pattern(self, st, risk) -> Pattern:
+    def _pattern(self, st, risk, feats=None) -> Pattern:
+        """The typology, from the detector that fired -- or from the shape of the
+        transaction when a fraud verdict rests on the cardholder's denial alone.
+
+        Most confirmed fraud in this dataset leaves no graph signature: it is a
+        single ordinary-looking transaction the cardholder later disputed.
+        Returning ``none`` there would contradict the verdict, so the fallback
+        mirrors how the shipped history labels exactly those cases. Measured on
+        the 4,665 confirmed frauds, the first fraudulent transaction's channel
+        determines the label almost perfectly:
+
+          in_person -> out_of_region_use (955) when the billing region is new to
+                       the card, otherwise account_takeover (1,117)
+          online    -> card_not_present_new_device (1,076) when the identity
+                       record marks the device New, otherwise
+                       card_not_present_fraud (1,404)
+
+        No other pattern appears on an in-person first transaction, and no
+        card-not-present label appears on one.
+        """
         if risk.agent_fraud_probability < 0.5:
             return Pattern.NONE
         matched = [f for f in st.findings if f.matched and f.pattern is not Pattern.NONE]
-        if not matched:
+        if matched:
+            return max(matched, key=lambda f: f.strength).pattern
+        if feats is None:
             return Pattern.NONE
-        return max(matched, key=lambda f: f.strength).pattern
+        if feats.channel == "in_person":
+            return Pattern.OUT_OF_REGION_USE if feats.region_novel else Pattern.ACCOUNT_TAKEOVER
+        if feats.channel == "online":
+            return (Pattern.CARD_NOT_PRESENT_NEW_DEVICE
+                    if (feats.device_marked_new and feats.device_novel)
+                    else Pattern.CARD_NOT_PRESENT_FRAUD)
+        return Pattern.NONE
 
     def _pattern_finding(self, st, risk) -> PatternFinding | None:
         if risk.agent_fraud_probability < 0.5:
@@ -592,7 +619,7 @@ class InvestigationAgent:
         self, st, feats, risk, initial, final, requests, similar, shared, episode,
         what_changed, risk0, t0,
     ) -> AnswerFile:
-        pattern = self._pattern(st, risk)
+        pattern = self._pattern(st, risk, feats)
         pf = self._pattern_finding(st, risk)
         verdict = self._verdict(risk.agent_fraud_probability, risk)
         actions = final.actions

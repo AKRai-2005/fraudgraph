@@ -464,7 +464,19 @@ def detect_account_takeover(ctx: CaseContext, f: Features) -> tuple[PatternFindi
         if matched else
         f"{'mixed-channel activity but only ' + str(anomalies) + ' identity anomalies' if mixed else 'single-channel activity in the window'}"
     )
-    ep = _episode(near) if matched and near else None
+    # The episode is the activity that looks taken over, not every transaction
+    # the cardholder made that week: online transactions from a device new to
+    # the account, plus the flagged one.  The closed history's account-takeover
+    # cases have a median of 2 transactions, so a 30-transaction episode would
+    # be the window talking, not the fraud.
+    flagged_id = str(ctx.txn.get("TransactionID"))
+    suspect = [
+        r for r in near
+        if str(r["TransactionID"]) == flagged_id
+        or (r.get("channel") == "online"
+            and (r.get("id_15") == "New" or r.get("device_profile") == f.device_profile))
+    ]
+    ep = _episode(suspect) if matched and suspect else None
     return (
         PatternFinding(
             pattern=Pattern.ACCOUNT_TAKEOVER, name="account_takeover", matched=matched,

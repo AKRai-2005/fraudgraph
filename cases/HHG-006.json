@@ -3,7 +3,7 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.99,
+    "fraud_probability": 0.975,
     "pattern": "undocumented",
     "pattern_description": "Sub-threshold structuring: several online purchases executed within a single short window, each priced just below the $500 authorisation threshold so that no individual charge triggers step-up review, while the combined total ($1,906.07) far exceeds it. It affects one cardholder at a time and was found by scanning the card's own transaction window for amount clustering immediately beneath round thresholds rather than by any single transaction looking unusual.",
     "affected_txn_ids": [
@@ -97,7 +97,7 @@
       "CC-3748",
       "CC-4124"
     ],
-    "summary": "Customer report on card C07297-K1: $482.12 online on 2016-11-21, scored 0.25 by the bank's model. 4 online purchases within 30 minutes, each between $440 and $500 (total $1,906.07); amounts sit just under the $500 authorisation threshold. Online accounts for only 2.5% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2649, CC-2985, CC-4086), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.99 on 3 independent signals, with exposure $1,906.07 across 4 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto), FILE_REPORT (L2).",
+    "summary": "Customer report on card C07297-K1: $482.12 online on 2016-11-21, scored 0.25 by the bank's model. 4 online purchases within 30 minutes, each between $440 and $500 (total $1,906.07); amounts sit just under the $500 authorisation threshold. Online accounts for only 2.5% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2649, CC-2985, CC-4086), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.97 on 3 independent signals, with exposure $1,906.07 across 4 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto), FILE_REPORT (L2).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -157,5 +157,5 @@
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
   "tokens": 0,
-  "latency_s": 0.16
+  "latency_s": 0.14
 }

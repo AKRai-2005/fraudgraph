@@ -1,10 +1,10 @@
 {
   "case_id": "HHG-009",
   "case": {
-    "status": "open",
-    "verdict": "uncertain",
-    "fraud_probability": 0.628,
-    "pattern": "none",
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.731,
+    "pattern": "card_not_present_fraud",
     "pattern_description": "",
     "affected_txn_ids": [
       "3581141"
@@ -49,28 +49,17 @@
       }
     ],
     "similar_prior_cases": [],
-    "summary": "Customer report on card C08299-K1: $30.02 online on 2016-12-28, scored 0.28 by the bank's model. $30.02 is at or below the card's 95th-percentile amount ($235.42); online is 87% of this card's history; product code s is 85% of this card's history; device profile already seen 5 times on this card. Verdict uncertain at probability 0.63 with confidence 0.63; the evidence does not yet settle the question. Recommended: STEP_UP_AUTH (auto), VERIFY_WITH_CUSTOMER (auto), CREATE_CASE (auto).",
+    "summary": "Customer report on card C08299-K1: $30.02 online on 2016-12-28, scored 0.28 by the bank's model. $30.02 is at or below the card's 95th-percentile amount ($235.42); online is 87% of this card's history; product code s is 85% of this card's history; device profile already seen 5 times on this card. Assessed as fraud at probability 0.73 on 1 independent signals, with exposure $30.02 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
-  "evidence_requests": [
-    {
-      "type": "customer_validation",
-      "asked_after_step": 7,
-      "assumed_response": "Taken from the trigger, not assumed: the cardholder has already stated in writing that they did not make this purchase."
-    }
-  ],
+  "evidence_requests": [],
   "next_best_actions": {
     "initial": [
       {
-        "action": "STEP_UP_AUTH",
-        "route": "auto",
-        "reason": "R1: require step-up authentication on further activity while verification is outstanding"
-      },
-      {
-        "action": "VERIFY_WITH_CUSTOMER",
-        "route": "auto",
-        "reason": "R1: assessed probability 0.41 rests on 1 signal; verify before any block"
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $30.02 is within the $2,500 L1 limit"
       },
       {
         "action": "CREATE_CASE",
@@ -80,14 +69,9 @@
     ],
     "final": [
       {
-        "action": "STEP_UP_AUTH",
-        "route": "auto",
-        "reason": "R1: require step-up authentication on further activity while verification is outstanding"
-      },
-      {
-        "action": "VERIFY_WITH_CUSTOMER",
-        "route": "auto",
-        "reason": "R1: assessed probability 0.63 rests on 1 signal; verify before any block"
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction; exposure $30.02 is within the $2,500 L1 limit"
       },
       {
         "action": "CREATE_CASE",
@@ -95,7 +79,7 @@
         "reason": "R2: confirmed unauthorised use opens a case"
       }
     ],
-    "what_changed": "The simulated customer validation response (Taken from the trigger, not assumed: the cardholder has already stated in writing that they did not make this purchase.) moved the assessed probability from 0.41 to 0.63."
+    "what_changed": "nothing"
   },
   "sar": {
     "file": false,
@@ -108,5 +92,5 @@
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 10,
   "tokens": 0,
-  "latency_s": 0.14
+  "latency_s": 0.12
 }

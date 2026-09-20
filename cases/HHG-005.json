@@ -1,18 +1,16 @@
 {
   "case_id": "HHG-005",
   "case": {
-    "status": "open",
-    "verdict": "uncertain",
-    "fraud_probability": 0.556,
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.231,
     "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": [
-      "3523199"
-    ],
-    "first_suspicious_txn_id": "3523199",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 100.07,
+    "exposure_usd": 0.0,
     "evidence": [
       {
         "claim": "Flagged transaction 3523199 on card C02923-K1: $100.07 online under product code R on 2016-12-07 21:38:37, scored 0.54 by the bank's model.",
@@ -69,7 +67,7 @@
       "CC-2717",
       "CC-2857"
     ],
-    "summary": "Risk score on card C02923-K1: $100.07 online on 2016-12-07, scored 0.54 by the bank's model. $100.07 is at or below the card's 95th-percentile amount ($761.23); online is 23% of this card's history; 85 prior transactions in billing region 330; product code r is 7% of this card's history. Case memory returned 3 comparable closed investigation(s) (CC-2400, CC-2717, CC-2857), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.56 with confidence 0.66; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
+    "summary": "Risk score on card C02923-K1: $100.07 online on 2016-12-07, scored 0.54 by the bank's model. $100.07 is at or below the card's 95th-percentile amount ($761.23); online is 23% of this card's history; 85 prior transactions in billing region 330; product code r is 7% of this card's history. Case memory returned 3 comparable closed investigation(s) (CC-2400, CC-2717, CC-2857), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.23; the bank model's score of 0.54 is not corroborated by the graph. Recommended: ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -77,23 +75,33 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "CREATE_CASE",
+        "action": "ALLOW_TRANSACTION",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.56 reaches the 0.30 case threshold"
+        "reason": "no graph signal departs from this card's established behaviour"
+      },
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "R3/3a: the evidence supports legitimate activity; close the alert"
       }
     ],
     "final": [
       {
-        "action": "CREATE_CASE",
+        "action": "ALLOW_TRANSACTION",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.56 reaches the 0.30 case threshold"
+        "reason": "no graph signal departs from this card's established behaviour"
+      },
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "R3/3a: the evidence supports legitimate activity; close the alert"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud is not confirmed or strongly suspected (probability 0.56), so no regulatory filing is due. A case may still be opened.",
+    "reason": "3a: fraud is not confirmed or strongly suspected (probability 0.23), so no regulatory filing is due. A case may still be opened.",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
@@ -102,5 +110,5 @@
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 11,
   "tokens": 0,
-  "latency_s": 0.21
+  "latency_s": 0.16
 }

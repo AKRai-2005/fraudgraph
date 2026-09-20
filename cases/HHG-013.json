@@ -3,51 +3,18 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 1.0,
+    "fraud_probability": 0.714,
     "pattern": "account_takeover",
     "pattern_description": "",
     "affected_txn_ids": [
-      "3521713",
-      "3521799",
-      "3521839",
-      "3521874",
-      "3522133",
-      "3523372",
-      "3523953",
-      "3524194",
-      "3524237",
-      "3524600",
-      "3524626",
-      "3524788",
-      "3525205",
-      "3525559",
-      "3525584",
-      "3525753",
-      "3525762",
-      "3525902",
-      "3526234",
-      "3526249",
-      "3526265",
-      "3526538",
-      "3526677",
-      "3526747",
-      "3526826",
-      "3526999",
-      "3527288",
-      "3527851",
-      "3528696",
-      "3529131",
-      "3529473",
-      "3529623",
-      "3531359",
-      "3532154"
+      "3526826"
     ],
-    "first_suspicious_txn_id": "3521713",
+    "first_suspicious_txn_id": "3526826",
     "connected_card_ids": [],
     "connected_device_profiles": [
       "Windows | unknown | chrome 66.0 | unknown"
     ],
-    "exposure_usd": 3058.09,
+    "exposure_usd": 35.66,
     "evidence": [
       {
         "claim": "Flagged transaction 3526826 on card C07671-K2: $35.66 online under product code C on 2016-12-09 02:39:29, scored 0.76 by the bank's model.",
@@ -87,30 +54,6 @@
         "source": "graph",
         "ref": "query:card_window(card_id=C07671-K2, center_ts=2016-12-09 02:39:29)",
         "entity_ids": [
-          "3521713",
-          "3521799",
-          "3521839",
-          "3521874",
-          "3522133",
-          "3523372",
-          "3523953",
-          "3524194",
-          "3524237",
-          "3524600",
-          "3524626",
-          "3524788",
-          "3525205",
-          "3525559",
-          "3525584",
-          "3525753",
-          "3525762",
-          "3525902",
-          "3526234",
-          "3526249",
-          "3526265",
-          "3526538",
-          "3526677",
-          "3526747",
           "3526826"
         ]
       },
@@ -155,7 +98,7 @@
       "CC-2409",
       "CC-1930"
     ],
-    "summary": "Risk score on card C07671-K2: $35.66 online on 2016-12-09, scored 0.76 by the bank's model. Online purchase from a device profile never seen on this card (13 devices previously seen), marked new for the account. Online accounts for only 1.5% of this card's history. Activity on both channels within 48 hours with 2 identity anomalies (new device=true, device marked new=true, match flag=n/a, proxy=none, new email domain=false). Case memory returned 6 comparable closed investigation(s) (CC-1475, CC-3216, CC-3761), used as context rather than as a finding about this transaction. Assessed as fraud at probability 1.00 on 3 independent signals, with exposure $3,058.09 across 34 transaction(s). Recommended: BLOCK_CARD (L2), MONITOR_CARD (auto), CREATE_CASE (auto), FILE_REPORT (L2).",
+    "summary": "Risk score on card C07671-K2: $35.66 online on 2016-12-09, scored 0.76 by the bank's model. Online purchase from a device profile never seen on this card (13 devices previously seen), marked new for the account. Online accounts for only 1.5% of this card's history. Activity on both channels within 48 hours with 2 identity anomalies (new device=true, device marked new=true, match flag=n/a, proxy=none, new email domain=false). Case memory returned 6 comparable closed investigation(s) (CC-1475, CC-3216, CC-3761), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.71 on 3 independent signals, with exposure $35.66 across 1 transaction(s). Recommended: CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -163,67 +106,30 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L2",
-        "reason": "R2 by analogy: assessed probability 1.00 with 3 independent signals supports blocking the card; exposure $3,058.09"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 1.00 reaches the 0.30 case threshold"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "3a: exposure $3,058.09 exceeds $1,000"
+        "reason": "3a: assessed fraud probability 0.71 reaches the 0.30 case threshold"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L2",
-        "reason": "R2 by analogy: assessed probability 1.00 with 3 independent signals supports blocking the card; exposure $3,058.09"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 1.00 reaches the 0.30 case threshold"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "3a: exposure $3,058.09 exceeds $1,000"
+        "reason": "3a: assessed fraud probability 0.71 reaches the 0.30 case threshold"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
-    "file": true,
-    "reason": "3a: fraud is strongly suspected (probability 1.00) and exposure $3,058.09 exceeds $1,000",
-    "narrative": "Customer C07671, holder of card C07671-K2 and 1 other card(s) with this institution. Between 2016-12-09 and 2016-12-09, 34 transaction(s) totalling $3,058.09 were identified as part of a single suspected fraud episode, beginning with transaction 3521713. The activity was conducted online under product code C, from device profile 'Windows | unknown | chrome 66.0 | unknown'. Activity on both channels within 48 hours with 2 identity anomalies (new device=true, device marked new=true, match flag=n/a, proxy=none, new email domain=false). The cardholder's established profile over 1431 prior transactions shows a median amount of $59.08 and a maximum of $3,891.01. Closed investigation(s) CC-1475, CC-3216, CC-3761 record comparable activity previously confirmed by this institution. The institution's recommended disposition is: BLOCK_CARD, MONITOR_CARD, CREATE_CASE, FILE_REPORT. Actions requiring team-lead or fraud-manager approval are recorded as awaiting approval and have not been executed.",
-    "subjects": [
-      "C07671",
-      "C07671-K2",
-      "Windows | unknown | chrome 66.0 | unknown"
-    ],
-    "total_amount_usd": 3058.09,
-    "activity_dates": [
-      "2016-12-07",
-      "2016-12-11"
-    ]
+    "file": false,
+    "reason": "3a: fraud is strongly suspected but exposure $35.66 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
   },
-  "stop_reason": "Fraud probability 1.00 is at or above 0.85 with 3 independent pieces of evidence (policy 6).",
+  "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 12,
   "tokens": 0,
-  "latency_s": 0.34
+  "latency_s": 0.32
 }

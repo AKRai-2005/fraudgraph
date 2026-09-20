@@ -1,18 +1,16 @@
 {
   "case_id": "HHG-001",
   "case": {
-    "status": "closed_fraud",
-    "verdict": "fraud",
-    "fraud_probability": 0.944,
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.022,
     "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": [
-      "3514030"
-    ],
-    "first_suspicious_txn_id": "3514030",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 77.07,
+    "exposure_usd": 0.0,
     "evidence": [
       {
         "claim": "Flagged transaction 3514030 on card C12382-K1: $77.07 in-person under product code W on 2016-12-04 19:55:28, scored 0.61 by the bank's model.",
@@ -86,7 +84,7 @@
       "CC-2964",
       "CC-3587"
     ],
-    "summary": "Risk score on card C12382-K1: $77.07 in-person on 2016-12-04, scored 0.61 by the bank's model. $77.07 is at or below the card's 95th-percentile amount ($381.86); in_person is 99% of this card's history; 10 prior transactions in billing region 444; product code w is 99% of this card's history. Case memory returned 4 comparable closed investigation(s) (CC-1066, CC-1673, CC-2964), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.94 on 1 independent signals, with exposure $77.07 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Risk score on card C12382-K1: $77.07 in-person on 2016-12-04, scored 0.61 by the bank's model. $77.07 is at or below the card's 95th-percentile amount ($381.86); in_person is 99% of this card's history; 10 prior transactions in billing region 444; product code w is 99% of this card's history. Case memory returned 4 comparable closed investigation(s) (CC-1066, CC-1673, CC-2964), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.02; the bank model's score of 0.61 is not corroborated by the graph. Recommended: CREATE_CASE (auto), ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -94,7 +92,7 @@
     {
       "type": "customer_validation",
       "asked_after_step": 7,
-      "assumed_response": "Simulated response: the cardholder states they did not make this transaction and still holds the card."
+      "assumed_response": "Simulated response: the cardholder confirms the transaction as their own."
     }
   ],
   "next_best_actions": {
@@ -107,31 +105,41 @@
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: assessed probability 0.56 rests on 1 signal; verify before any block"
+        "reason": "R1: assessed probability 0.23 rests on 1 signal; verify before any block"
       },
       {
-        "action": "CREATE_CASE",
+        "action": "ALLOW_TRANSACTION",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.56 reaches the 0.30 case threshold"
+        "reason": "no graph signal departs from this card's established behaviour"
+      },
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "R3/3a: the evidence supports legitimate activity; close the alert"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2: cardholder denies the transaction; exposure $77.07 is within the $2,500 L1 limit"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "R2: confirmed unauthorised use opens a case"
+        "reason": "3a: a case is opened whenever evidence is requested"
+      },
+      {
+        "action": "ALLOW_TRANSACTION",
+        "route": "auto",
+        "reason": "no graph signal departs from this card's established behaviour"
+      },
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "R3: cardholder confirms the transaction; close the alert as legitimate"
       }
     ],
-    "what_changed": "The simulated customer validation response (Simulated response: the cardholder states they did not make this transaction and still holds the card.) moved the assessed probability from 0.56 to 0.94. Added BLOCK_CARD. Withdrew STEP_UP_AUTH, VERIFY_WITH_CUSTOMER."
+    "what_changed": "The simulated customer validation response (Simulated response: the cardholder confirms the transaction as their own.) moved the assessed probability from 0.23 to 0.02. Added CREATE_CASE. Withdrew STEP_UP_AUTH, VERIFY_WITH_CUSTOMER."
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud is strongly suspected but exposure $77.07 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "reason": "3a: fraud is not confirmed or strongly suspected (probability 0.02), so no regulatory filing is due. A case may still be opened.",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
@@ -140,5 +148,5 @@
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
   "tokens": 0,
-  "latency_s": 1.22
+  "latency_s": 1.07
 }

@@ -1,20 +1,18 @@
 {
   "case_id": "HHG-010",
   "case": {
-    "status": "closed_fraud",
-    "verdict": "fraud",
-    "fraud_probability": 0.991,
-    "pattern": "card_not_present_new_device",
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.427,
+    "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": [
-      "3506725"
-    ],
-    "first_suspicious_txn_id": "3506725",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
     "connected_card_ids": [],
     "connected_device_profiles": [
       "Windows | Windows 10 | edge 16.0 | 1366x768"
     ],
-    "exposure_usd": 1000.03,
+    "exposure_usd": 0.0,
     "evidence": [
       {
         "claim": "Flagged transaction 3506725 on card C10434-K1: $1,000.03 online under product code R on 2016-12-02 15:18:27, scored 0.90 by the bank's model.",
@@ -90,7 +88,7 @@
       "CC-3549",
       "CC-3691"
     ],
-    "summary": "Risk score on card C10434-K1: $1,000.03 online on 2016-12-02, scored 0.90 by the bank's model. Online purchase from a device profile never seen on this card (11 devices previously seen), marked new for the account. $1,000.03 exceeds the card's historical maximum of $670.04. Case memory returned 6 comparable closed investigation(s) (CC-0873, CC-1034, CC-2720), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.99 on 2 independent signals, with exposure $1,000.03 across 1 transaction(s). Recommended: BLOCK_CARD (L1), MONITOR_CARD (auto), CREATE_CASE (auto), FILE_REPORT (L2).",
+    "summary": "Risk score on card C10434-K1: $1,000.03 online on 2016-12-02, scored 0.90 by the bank's model. Online purchase from a device profile never seen on this card (11 devices previously seen), marked new for the account. $1,000.03 exceeds the card's historical maximum of $670.04. Case memory returned 6 comparable closed investigation(s) (CC-0873, CC-1034, CC-2720), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.43 with confidence 0.56; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -98,67 +96,30 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2 by analogy: assessed probability 0.99 with 2 independent signals supports blocking the card; exposure $1,000.03"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.99 reaches the 0.30 case threshold"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "3a: exposure $1,000.03 exceeds $1,000"
+        "reason": "3a: assessed fraud probability 0.43 reaches the 0.30 case threshold"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2 by analogy: assessed probability 0.99 with 2 independent signals supports blocking the card; exposure $1,000.03"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.99 reaches the 0.30 case threshold"
-      },
-      {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "3a: exposure $1,000.03 exceeds $1,000"
+        "reason": "3a: assessed fraud probability 0.43 reaches the 0.30 case threshold"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
-    "file": true,
-    "reason": "3a: fraud is strongly suspected (probability 0.99) and exposure $1,000.03 exceeds $1,000",
-    "narrative": "Customer C10434, holder of card C10434-K1. Between 2016-12-02 and 2016-12-02, 1 transaction(s) totalling $1,000.03 were identified as part of a single suspected fraud episode, beginning with transaction 3506725. The activity was conducted online under product code R, billed in region 469, from device profile 'Windows | Windows 10 | edge 16.0 | 1366x768'. Online purchase from a device profile never seen on this card (11 devices previously seen), marked new for the account. The cardholder's established profile over 33 prior transactions shows a median amount of $68.98 and a maximum of $670.04. Closed investigation(s) CC-0873, CC-1034, CC-2720 record comparable activity previously confirmed by this institution. The institution's recommended disposition is: BLOCK_CARD, MONITOR_CARD, CREATE_CASE, FILE_REPORT. Actions requiring team-lead or fraud-manager approval are recorded as awaiting approval and have not been executed.",
-    "subjects": [
-      "C10434",
-      "C10434-K1",
-      "Windows | Windows 10 | edge 16.0 | 1366x768"
-    ],
-    "total_amount_usd": 1000.03,
-    "activity_dates": [
-      "2016-12-02",
-      "2016-12-02"
-    ]
+    "file": false,
+    "reason": "3a: fraud is not confirmed or strongly suspected (probability 0.43), so no regulatory filing is due. A case may still be opened.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
   },
-  "stop_reason": "Fraud probability 0.99 is at or above 0.85 with 2 independent pieces of evidence (policy 6).",
+  "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
   "tokens": 0,
-  "latency_s": 0.24
+  "latency_s": 0.2
 }

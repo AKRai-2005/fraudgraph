@@ -54,19 +54,30 @@ MAX_ABS_WEIGHT = 2.6
 #: Detectors whose measured counts are too small to estimate a weight from.
 #: The floor is the challenge's own documentation; the count is recorded so the
 #: reader can see exactly how thin the evidence is.
+#: Detectors whose job is to support a fraud reading. Their weight is floored at
+#: zero: a fraud detector may support fraud or stay silent, but it may not argue
+#: for innocence. Where the measured ratio is below 1 (``cnp_new_device`` fires
+#: on 7.1% of frauds and 10.9% of legitimate activity) the detector contributes
+#: nothing rather than exculpating -- which is the dataset README's own point,
+#: that people buy new phones.
+INCULPATORY_DETECTORS = {
+    "card_testing", "sub_threshold_structuring", "shared_device_ring",
+    "out_of_region_use", "cnp_new_device", "cnp_fraud", "account_takeover",
+}
+
 DOCUMENTED_FLOORS: dict[str, tuple[float, str]] = {
     "card_testing": (
-        1.80,
+        1.20,
         "the closed history holds only 16 card-testing cases, too few to estimate from; the "
         "dataset README documents the sequence as a fraud typology and policy R5 acts on it",
     ),
     "sub_threshold_structuring": (
-        2.00,
+        1.60,
         "read from 5 closed cases (CC-3748, CC-3841, CC-3907, CC-4086, CC-4124) whose analyst "
         "notes describe amounts chosen to stay under a $500 authorisation threshold",
     ),
     "shared_device_ring": (
-        2.40,
+        2.20,
         "read from 4 closed cases (CC-2649, CC-2971, CC-2985, CC-3035); the detector fired on 4 "
         "confirmed frauds and 0 legitimate cases, which supports a high weight but on a small "
         "sample",
@@ -107,6 +118,13 @@ def build(rates_path=None) -> dict:
             note += f". Floor applied: {floor[1]}"
         if name == "prior_fraud_on_card":
             w = min(w, PRIOR_FRAUD_ON_CARD_CAP)
+        if name in INCULPATORY_DETECTORS and w < 0.0:
+            note += (
+                f". Measured ratio is below 1, so the weight is floored at zero: this detector "
+                f"may support a fraud reading or stay silent, but may not argue for innocence"
+            )
+            w = 0.0
+            source = "measured, floored at zero"
         w = max(-MAX_ABS_WEIGHT, min(MAX_ABS_WEIGHT, w))
         weights[name] = round(w, 3)
         basis.append({

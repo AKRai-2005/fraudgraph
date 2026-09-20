@@ -1,18 +1,16 @@
 {
   "case_id": "HHG-002",
   "case": {
-    "status": "closed_fraud",
-    "verdict": "fraud",
-    "fraud_probability": 0.971,
-    "pattern": "card_not_present_fraud",
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.372,
+    "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": [
-      "3478782"
-    ],
-    "first_suspicious_txn_id": "3478782",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 292.36,
+    "exposure_usd": 0.0,
     "evidence": [
       {
         "claim": "Flagged transaction 3478782 on card C11891-K1: $292.36 online under product code C on 2016-11-22 17:27:07, scored 0.79 by the bank's model.",
@@ -88,7 +86,7 @@
       "CC-1955",
       "CC-2805"
     ],
-    "summary": "Risk score on card C11891-K1: $292.36 online on 2016-11-22, scored 0.79 by the bank's model. $292.36 exceeds the card's historical maximum of $121.32. Case memory returned 6 comparable closed investigation(s) (CC-4160, CC-4076, CC-2681), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.97 on 2 independent signals, with exposure $292.36 across 1 transaction(s). Recommended: BLOCK_CARD (L1), MONITOR_CARD (auto), CREATE_CASE (auto).",
+    "summary": "Risk score on card C11891-K1: $292.36 online on 2016-11-22, scored 0.79 by the bank's model. $292.36 exceeds the card's historical maximum of $121.32. Case memory returned 6 comparable closed investigation(s) (CC-4160, CC-4076, CC-2681), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.37 with confidence 0.56; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -96,50 +94,30 @@
   "next_best_actions": {
     "initial": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2 by analogy: assessed probability 0.97 with 2 independent signals supports blocking the card; exposure $292.36"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.97 reaches the 0.30 case threshold"
+        "reason": "3a: assessed fraud probability 0.37 reaches the 0.30 case threshold"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "R2 by analogy: assessed probability 0.97 with 2 independent signals supports blocking the card; exposure $292.36"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "monitor the card while reissue is arranged"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: assessed fraud probability 0.97 reaches the 0.30 case threshold"
+        "reason": "3a: assessed fraud probability 0.37 reaches the 0.30 case threshold"
       }
     ],
     "what_changed": "nothing"
   },
   "sar": {
     "file": false,
-    "reason": "3a: fraud is strongly suspected but exposure $292.36 is below $1,000, the activity does not connect to a shared device profile, region cluster or another customer's fraud, and the pattern is documented. Case only.",
+    "reason": "3a: fraud is not confirmed or strongly suspected (probability 0.37), so no regulatory filing is due. A case may still be opened.",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Fraud probability 0.97 is at or above 0.85 with 2 independent pieces of evidence (policy 6).",
+  "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 9,
   "tokens": 0,
-  "latency_s": 0.09
+  "latency_s": 0.08
 }
