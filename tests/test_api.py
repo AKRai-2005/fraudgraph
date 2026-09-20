@@ -86,10 +86,11 @@ def test_queue_rows_carry_what_the_table_renders(client):
 
 
 def test_overview_counts_match_the_queue(client):
+    """The overview describes the case pack; the queue also carries ad-hoc runs."""
     o = client.get("/api/overview").json()
-    rows = client.get("/api/queue").json()
-    assert o["cases_investigated"] == len(rows)
-    assert sum(o["by_verdict"].values()) == len(rows)
+    pack_rows = [r for r in client.get("/api/queue").json() if not r["adhoc"]]
+    assert o["cases_investigated"] == len(pack_rows)
+    assert sum(o["by_verdict"].values()) == len(pack_rows)
 
 
 def test_case_detail_and_graph(client):
@@ -295,3 +296,29 @@ def test_memory_does_not_claim_writes_the_graph_refused(client):
 def test_head_on_the_console_is_allowed(client):
     """A health checker doing HEAD / used to get 405."""
     assert client.head("/").status_code == 200
+
+
+def test_adhoc_investigations_do_not_inflate_the_benchmark_counts(client):
+    """An ad-hoc case is a real investigation, but it is not one of the 20.
+
+    Counted together the overview read "21 investigations" against "20 alerts
+    in the case pack", and the divergence chart silently gained a point.
+    """
+    before = client.get("/api/overview").json()
+    before_div = client.get("/api/divergence").json()["n_scored"]
+
+    r = client.post("/api/investigate-adhoc", json={"txn_id": "3514030"})
+    assert r.status_code == 200
+    assert r.json()["case_id"].startswith("ADHOC-")
+
+    after = client.get("/api/overview").json()
+    assert after["cases_investigated"] == before["cases_investigated"]
+    assert after["total_alerts_in_pack"] == after["cases_investigated"]
+    assert after["adhoc_investigations"] >= 1
+    assert client.get("/api/divergence")["n_scored"] if False else \
+        client.get("/api/divergence").json()["n_scored"] == before_div
+
+    # but it is still in the queue, flagged
+    rows = client.get("/api/queue").json()
+    adhoc = [x for x in rows if x["adhoc"]]
+    assert adhoc, "an ad-hoc investigation vanished from the queue"

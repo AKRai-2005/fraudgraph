@@ -122,7 +122,9 @@ async function loadOverview() {
   }
   clearError('#view-overview');
   $('#kpis').innerHTML = [
-    kpi(o.cases_investigated, 'Investigations', `${o.total_alerts_in_pack} alerts in the case pack`),
+    kpi(o.cases_investigated, 'Investigations',
+        `${o.total_alerts_in_pack} alerts in the case pack`
+        + (o.adhoc_investigations ? ` &middot; ${o.adhoc_investigations} ad hoc, counted separately` : '')),
     kpi(o.closed_fraud, 'Closed &ndash; fraud', 'verdict fraud, evidence sufficient'),
     kpi(o.closed_legitimate, 'Closed &ndash; legitimate', 'alert not corroborated by the graph'),
     kpi(o.escalated + o.open, 'Open or escalated', 'awaiting a human decision'),
@@ -382,7 +384,7 @@ function renderQueue() {
   $('#queueTable tbody').innerHTML = rows.map((r) => `
     <tr data-case="${esc(r.case_id)}" tabindex="0" role="button"
         aria-label="Open case ${esc(r.case_id)}, ${esc(r.verdict)}">
-      <td class="mono" data-label="Case">${esc(r.case_id)}</td>
+      <td class="mono" data-label="Case">${esc(r.case_id)}${r.adhoc ? ' <span class="tag sim" title="Opened by an analyst on an arbitrary transaction, not one of the 20 challenge alerts">ad hoc</span>' : ''}</td>
       <td data-label="Trigger"><span class="tag">${esc((r.trigger_type || '').replace('_', ' '))}</span></td>
       <td class="mono" data-label="Card">${esc(r.card_id)}</td>
       <td class="num" data-label="Bank score">${r.bank_risk_score == null ? '&mdash;' : Number(r.bank_risk_score).toFixed(2)}</td>

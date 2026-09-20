@@ -104,7 +104,15 @@ class CaseService:
         rec["approvals"] = self._approvals().get(case_id, {})
         return rec
 
-    def all_records(self) -> list[dict]:
+    def all_records(self, pack_only: bool = False) -> list[dict]:
+        """Every investigation record on disk.
+
+        ``pack_only`` drops ad-hoc investigations. An analyst opening a case on
+        an arbitrary transaction is a real investigation and belongs in the
+        queue, but it is not one of the challenge's 20 alerts -- counted in
+        with them it read "21 investigations" against "20 alerts in the case
+        pack", and quietly moved the numbers on the divergence chart.
+        """
         out = []
         approvals = self._approvals()
         for p in sorted(self.records_dir.glob("*.json")):
@@ -112,7 +120,11 @@ class CaseService:
                 rec = json.loads(p.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 continue
-            rec["approvals"] = approvals.get(rec.get("case_id", ""), {})
+            cid = rec.get("case_id", "")
+            rec["adhoc"] = cid.startswith("ADHOC-")
+            if pack_only and rec["adhoc"]:
+                continue
+            rec["approvals"] = approvals.get(cid, {})
             out.append(rec)
         return out
 
@@ -134,7 +146,8 @@ class CaseService:
 
     # ------------------------------------------------------------- overview
     def overview(self) -> dict:
-        recs = self.all_records()
+        recs = self.all_records(pack_only=True)
+        adhoc = [r for r in self.all_records() if r.get("adhoc")]
         pack = self.case_pack()
         rows = []
         for r in recs:
@@ -174,6 +187,7 @@ class CaseService:
         return {
             "total_alerts_in_pack": len(pack),
             "cases_investigated": len(rows),
+            "adhoc_investigations": len(adhoc),
             "by_status": counts,
             "by_verdict": {v: sum(1 for r in rows if r["verdict"] == v)
                            for v in {r["verdict"] for r in rows}},
@@ -240,6 +254,7 @@ class CaseService:
                 "assigned_analyst": (approvals.get(cid) or {}).get("_assigned"),
                 "last_updated": r.get("generated_at") or self._mtime(cid),
                 "written_to_graph": c.get("written_to_graph"),
+                "adhoc": bool(r.get("adhoc")),
             })
         return sorted(out, key=lambda r: (-(r["fraud_probability"] or 0), r["case_id"]))
 
@@ -252,7 +267,7 @@ class CaseService:
 
     def divergence(self) -> dict:
         points, escalated, cleared, agreed = [], 0, 0, 0
-        for r in self.all_records():
+        for r in self.all_records(pack_only=True):
             risk = r.get("risk") or {}
             bank = risk.get("bank_risk_score")
             c = (r.get("answer") or {}).get("case", {})
