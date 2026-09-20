@@ -19,6 +19,14 @@ DT = "%Y-%m-%d %H:%M:%S"
 
 
 def _conn():
+    """Build a pyTigerGraph connection.
+
+    Savanna authenticates tools with a **database secret**, not a password:
+    the workspace URL goes in TG_HOST and the secret in TG_SECRET. The secret
+    is passed as ``gsqlSecret`` so GSQL DDL (schema, loading jobs, installing
+    queries) authenticates too, not just the REST endpoints. Username/password
+    still works for a self-hosted Community Edition install.
+    """
     import pyTigerGraph as tg
 
     host = TG.host.rstrip("/")
@@ -29,17 +37,19 @@ def _conn():
         "restppPort": TG.rest_port,
         "gsPort": TG.gs_port,
     }
+    if TG.secret:
+        kwargs["gsqlSecret"] = TG.secret
+        kwargs["tgCloud"] = True
+        kwargs["sslPort"] = TG.rest_port
     if TG.password:
         kwargs["password"] = TG.password
     conn = tg.TigerGraphConnection(**kwargs)
     if TG.token:
         conn.apiToken = TG.token
     elif TG.secret:
-        conn.getToken(TG.secret)
-    else:
         try:
-            conn.getToken(conn.createSecret())
-        except Exception:  # noqa: BLE001 - some deployments need no token
+            conn.getToken(TG.secret)
+        except Exception:  # noqa: BLE001 - gsqlSecret already authenticates GSQL
             pass
     return conn
 

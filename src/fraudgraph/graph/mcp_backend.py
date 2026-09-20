@@ -93,16 +93,20 @@ class MCPGraphBackend:
             from mcp.client.stdio import stdio_client
 
             env = dict(os.environ)
+            # The three variables tigergraph-mcp documents for Savanna are
+            # TG_HOST, TG_SECRET and TG_GRAPHNAME; username/password is the
+            # self-hosted path.
             env.update({
                 "TG_HOST": TG.host,
                 "TG_GRAPHNAME": TG.graph,
-                "TG_USERNAME": TG.username or "tigergraph",
-                "TG_PASSWORD": TG.password,
                 "TG_SSL_PORT": TG.rest_port,
                 "TG_TGCLOUD": "true" if TG.use_tls else "false",
             })
             if TG.secret:
                 env["TG_SECRET"] = TG.secret
+            else:
+                env["TG_USERNAME"] = TG.username or "tigergraph"
+                env["TG_PASSWORD"] = TG.password
             if TG.token:
                 env["TG_API_TOKEN"] = TG.token
             params = StdioServerParameters(command=MCP_SERVER_CMD, args=[], env=env)

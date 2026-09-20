@@ -42,14 +42,17 @@ FILE_TAGS = {
 def _require_config() -> None:
     if not TG.configured:
         print(
-            "TigerGraph is not configured. Copy .env.example to .env and fill in TG_HOST, "
-            "TG_USERNAME and TG_PASSWORD (or TG_SECRET) from your Savanna workspace.",
+            "TigerGraph is not configured. Fill in .env:\n"
+            "  TG_HOST   - Savanna -> Workspaces -> your workspace -> copy its URL\n"
+            "  TG_SECRET - Savanna -> Database Secrets -> Create Secret (shown once)\n"
+            "Savanna authenticates tools with a secret, not a password.",
             file=sys.stderr,
         )
         raise SystemExit(2)
 
 
 def _conn(graph: str | None = None):
+    """Same auth rules as the runtime backend -- see fraudgraph.graph.tigergraph."""
     import pyTigerGraph as tg
 
     kwargs = {
@@ -60,9 +63,19 @@ def _conn(graph: str | None = None):
     }
     if graph:
         kwargs["graphname"] = graph
+    if TG.secret:
+        kwargs["gsqlSecret"] = TG.secret
+        kwargs["tgCloud"] = True
+        kwargs["sslPort"] = TG.rest_port
     if TG.password:
         kwargs["password"] = TG.password
-    return tg.TigerGraphConnection(**kwargs)
+    conn = tg.TigerGraphConnection(**kwargs)
+    if TG.secret:
+        try:
+            conn.getToken(TG.secret)
+        except Exception:  # noqa: BLE001
+            pass
+    return conn
 
 
 def create_schema(drop: bool = False) -> None:
@@ -83,8 +96,6 @@ def create_schema(drop: bool = False) -> None:
 def install_queries() -> None:
     _require_config()
     conn = _conn(TG.graph)
-    if TG.secret:
-        conn.getToken(TG.secret)
     queries = (GSQL_DIR / "queries.gsql").read_text(encoding="utf-8")
     print("Installing GSQL queries (this takes a few minutes) ...")
     out = conn.gsql(f"USE GRAPH {TG.graph}\n" + queries)
@@ -106,8 +117,6 @@ def create_loading_job() -> None:
 def load_data(only: list[str] | None = None) -> dict:
     _require_config()
     conn = _conn(TG.graph)
-    if TG.secret:
-        conn.getToken(TG.secret)
     csv_dir = PATHS.build / "tg_csv"
     if not csv_dir.exists():
         print("No exported CSVs. Run: python -m fraudgraph.ingest.tg_export", file=sys.stderr)

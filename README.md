@@ -105,12 +105,18 @@ turn on the two mandatory integrations, below.
 Create a free workspace at <https://savanna.tgcloud.io> (or install Community
 Edition), then put the connection details in `.env`:
 
+Savanna authenticates tools with a **database secret**, not a password:
+
 ```
-TG_HOST=https://<workspace>.i.tgcloud.io
-TG_USERNAME=tigergraph
-TG_PASSWORD=<your password>
+TG_HOST=https://<workspace>.i.tgcloud.io   # Workspaces -> your workspace -> its URL
+TG_SECRET=<database secret>                # Database Secrets -> Create Secret
 TG_GRAPH=FraudInvestigation
 ```
+
+The secret is passed to pyTigerGraph as `gsqlSecret`, so GSQL DDL (schema,
+loading jobs, installing queries) authenticates with it too, and to
+`tigergraph-mcp` as `TG_SECRET`. Username/password is the self-hosted
+Community Edition path.
 
 ```bash
 python -m fraudgraph.ingest.tg_load --schema
