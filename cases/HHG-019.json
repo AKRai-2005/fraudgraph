@@ -54,11 +54,11 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-5026 (confirmed_fraud, pattern out_of_region_use, exposure $309.86) matches this alert on a prior investigation on this exact card.",
+        "claim": "Case memory: closed case CC-2087 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=online)",
+        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
         "entity_ids": [
-          "CC-5026"
+          "CC-2087"
         ]
       },
       {
@@ -70,23 +70,23 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-2087 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "claim": "Case memory: closed case CC-5026 (confirmed_fraud, pattern out_of_region_use, exposure $309.86) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
+        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=online)",
         "entity_ids": [
-          "CC-2087"
+          "CC-5026"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-2011",
-      "CC-5026",
-      "CC-2860",
       "CC-2087",
-      "CC-3398",
-      "CC-1438"
+      "CC-2860",
+      "CC-5026",
+      "CC-0730",
+      "CC-1913"
     ],
-    "summary": "Risk score on card C07987-K2: $99.92 online on 2016-12-01, scored 0.90 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-2011, CC-5026, CC-2860), used as context rather than as a finding about this transaction. Evidence conflicts: cnp_new_device point to fraud while consistent_with_history point to legitimate use. Assessed as legitimate at fraud probability 0.23; the bank model's score of 0.90 is not corroborated by the graph. Recommended: ESCALATE_TO_ANALYST (auto).",
+    "summary": "Transaction 3503878 on card C07987-K2 for $99.92, made online on 2016-12-01 17:28:53, was scored 0.90 by the bank's model and involves a device profile never seen on this card among 25 previously seen devices. The transaction is consistent with the card's history, as $99.92 is at or below the 95th-percentile amount of $554.04, online transactions account for 26% of history, product code R accounts for 6%, and there are 5 prior transactions in billing region 264. Case memory shows four closed cases (CC-2011, CC-2087, CC-2860, and CC-5026) matching this alert on the card. The verdict is legitimate with a fraud probability of 0.23, pattern none, and $0.00 exposure, with the recommended action to ESCALATE_TO_ANALYST (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-019"
   },
@@ -118,6 +118,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 12,
-  "tokens": 0,
-  "latency_s": 3.15
+  "tokens": 1105,
+  "latency_s": 3.47
 }

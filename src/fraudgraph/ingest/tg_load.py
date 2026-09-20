@@ -211,15 +211,34 @@ def create_schema(drop: bool = False) -> None:
 
 
 def install_queries() -> None:
+    """Install the query catalogue, replacing any earlier version of it.
+
+    ``CREATE QUERY`` refuses a name the catalogue already holds -- "The query
+    name similar_closed_cases is used by another object" -- so this step could
+    create queries but never *update* one. Editing a .gsql file and re-running
+    printed 17 failures followed by "all queries in this catalog have been
+    installed already", which reads like success while the server quietly keeps
+    running the old query. ``CREATE OR REPLACE`` is the same statement for a
+    name that is new, so there is no separate first-run path.
+    """
     _require_config()
     conn = _conn(TG.graph)
     queries = (GSQL_DIR / "queries.gsql").read_text(encoding="utf-8")
-    stmts = gsql_statements(queries)
-    print(f"Creating {len(stmts)} GSQL queries ...")
-    _run_statements(conn, f"USE GRAPH {TG.graph}", stmts, "queries")
+    stmts = [_as_replace(s) for s in gsql_statements(queries)]
+    print(f"Creating (or replacing) {len(stmts)} GSQL queries ...")
+    ok = _run_statements(conn, f"USE GRAPH {TG.graph}", stmts, "queries")
     print("Installing (this takes a few minutes) ...", flush=True)
     out = conn.gsql(f"USE GRAPH {TG.graph}\nINSTALL QUERY ALL") or ""
     print("  " + (" ".join(out.split())[-1500:] or "(no output)"))
+    return ok
+
+
+def _as_replace(stmt: str) -> str:
+    """``CREATE QUERY x`` -> ``CREATE OR REPLACE QUERY x``, idempotently."""
+    s = stmt.lstrip()
+    if s.upper().startswith("CREATE QUERY"):
+        return "CREATE OR REPLACE QUERY" + s[len("CREATE QUERY"):]
+    return stmt
 
 
 def create_loading_job() -> None:

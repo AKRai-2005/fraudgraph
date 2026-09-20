@@ -40,11 +40,19 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-4501 (confirmed_fraud, pattern card_testing, exposure $1,508.58) matches this alert on a prior investigation on this exact card.",
+        "claim": "Case memory: closed case CC-0031 (confirmed_fraud, pattern card_not_present_new_device, exposure $20.36) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-0031"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0290 (confirmed_fraud, pattern card_testing, exposure $144.56) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_testing, channel=online)",
         "entity_ids": [
-          "CC-4501"
+          "CC-0290"
         ]
       },
       {
@@ -62,25 +70,17 @@
         "entity_ids": [
           "CC-2247"
         ]
-      },
-      {
-        "claim": "Case memory: closed case CC-3905 (confirmed_fraud, pattern card_not_present_new_device, exposure $1,397.53) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
-        "entity_ids": [
-          "CC-3905"
-        ]
       }
     ],
     "similar_prior_cases": [
-      "CC-4501",
+      "CC-0031",
+      "CC-0290",
       "CC-1056",
       "CC-2247",
-      "CC-3905",
-      "CC-3206",
-      "CC-3039"
+      "CC-2673",
+      "CC-2799"
     ],
-    "summary": "Customer report on card C11923-K2: $131.30 online on 2016-12-29, scored 0.39 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-4501, CC-1056, CC-2247), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 3 independent signals, with exposure $131.30 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Transaction 3583368 on card C11923-K2 for $131.30, occurring online on 2016-12-29 at 03:27:44, was scored 0.39 by the bank's model and assessed as fraud with a probability of 0.80 under the card_not_present_new_device pattern, resulting in an exposure of $131.30. The online purchase originated from a device profile never seen on this card, which has 25 previously seen devices. Case memory retrieved closed cases CC-0031, CC-0290, CC-1056, and CC-2247 on this exact card. The recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-011"
   },
@@ -122,6 +122,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
-  "tokens": 0,
-  "latency_s": 3.37
+  "tokens": 970,
+  "latency_s": 3.62
 }

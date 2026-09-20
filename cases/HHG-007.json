@@ -46,27 +46,27 @@
         ]
       },
       {
+        "claim": "Case memory: closed case CC-0657 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=in_person)",
+        "entity_ids": [
+          "CC-0657"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0765 (confirmed_fraud, pattern out_of_region_use, exposure $1,664.54) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=in_person)",
+        "entity_ids": [
+          "CC-0765"
+        ]
+      },
+      {
         "claim": "Case memory: closed case CC-1228 (confirmed_fraud, pattern account_takeover, exposure $1,112.65) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=account_takeover, channel=in_person)",
         "entity_ids": [
           "CC-1228"
-        ]
-      },
-      {
-        "claim": "Case memory: closed case CC-1524 (confirmed_fraud, pattern account_takeover, exposure $3,532.83) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=account_takeover, channel=in_person)",
-        "entity_ids": [
-          "CC-1524"
-        ]
-      },
-      {
-        "claim": "Case memory: closed case CC-2834 (confirmed_fraud, pattern account_takeover, exposure $387.92) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=account_takeover, channel=in_person)",
-        "entity_ids": [
-          "CC-2834"
         ]
       },
       {
@@ -80,20 +80,20 @@
     ],
     "similar_prior_cases": [
       "CC-0104",
+      "CC-0657",
+      "CC-0765",
       "CC-1228",
       "CC-1524",
-      "CC-2834",
-      "CC-0657",
-      "CC-3821"
+      "CC-1682"
     ],
-    "summary": "Risk score on card C09933-K2: $111.92 in-person on 2016-12-05, scored 0.87 by the bank's model. $111.92 is at or below the card's 95th-percentile amount ($335.03); in_person is 91% of this card's history; 2220 prior transactions in billing region 264; product code w is 91% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-0104, CC-1228, CC-1524), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.02; the bank model's score of 0.87 is not corroborated by the graph. Recommended: CREATE_CASE (auto), ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
+    "summary": "Flagged transaction 3514948 on card C09933-K2 for $111.92 occurred on 2016-12-05 00:46:14 and scored 0.87 by the bank's model, though the graph does not corroborate this score. The amount is at or below the card's 95th-percentile amount of $335.03, in-person accounts for 91% of the card's history alongside 2220 prior transactions in billing region 264, and product code W represents 91% of the history. Case memory includes closed cases CC-0104, CC-0657, CC-0765, and CC-1228. The transaction is assessed as legitimate with a fraud probability of 0.02 and a pattern of none, resulting in an exposure of $0.00. Recommended actions are CREATE_CASE (auto), ALLOW_TRANSACTION (auto), and CLOSE_NO_FRAUD (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-007"
   },
   "evidence_requests": [
     {
       "type": "customer_validation",
-      "asked_after_step": 7,
+      "asked_after_step": 8,
       "assumed_response": "Simulated response: the cardholder confirms the transaction as their own."
     }
   ],
@@ -149,6 +149,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 0,
-  "latency_s": 2.57
+  "tokens": 1160,
+  "latency_s": 2.79
 }

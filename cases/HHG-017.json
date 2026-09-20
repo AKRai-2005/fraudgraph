@@ -46,19 +46,11 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-5217 (confirmed_fraud, pattern card_not_present_new_device, exposure $450.14) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | chrome 65.0 | 1920x1080'.",
+        "claim": "Case memory: closed case CC-5172 (confirmed_fraud, pattern card_not_present_fraud, exposure $250.01) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | chrome 65.0 | 1920x1080'.",
         "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
         "entity_ids": [
-          "CC-5217"
-        ]
-      },
-      {
-        "claim": "Case memory: closed case CC-5455 (confirmed_fraud, pattern card_not_present_new_device, exposure $100.14) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | chrome 65.0 | 1920x1080'.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
-        "entity_ids": [
-          "CC-5455"
+          "CC-5172"
         ]
       },
       {
@@ -67,6 +59,14 @@
         "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
         "entity_ids": [
           "CC-5181"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-5217 (confirmed_fraud, pattern card_not_present_new_device, exposure $450.14) matches this alert on transactions in that case came from the same device profile 'Windows | Windows 10 | chrome 65.0 | 1920x1080'.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-5217"
         ]
       },
       {
@@ -80,20 +80,20 @@
     ],
     "similar_prior_cases": [
       "CC-1383",
-      "CC-5217",
-      "CC-5455",
+      "CC-5172",
       "CC-5181",
-      "CC-5481",
-      "CC-5446"
+      "CC-5217",
+      "CC-5292",
+      "CC-5345"
     ],
-    "summary": "Risk score on card C04570-K1: $100.09 online on 2016-11-11, scored 0.57 by the bank's model. $100.09 is at or below the card's 95th-percentile amount ($999.98); online is 67% of this card's history; 5 prior transactions in billing region 204; product code r is 56% of this card's history; device profile already seen 3 times on this card. Case memory returned 6 comparable closed investigation(s) (CC-1383, CC-5217, CC-5455), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.01; the bank model's score of 0.57 is not corroborated by the graph. Recommended: CREATE_CASE (auto), ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
+    "summary": "Flagged transaction 3450629 on card C04570-K1 for $100.09 online on 2016-11-11 23:46:24 scored 0.57 by the bank's model and is consistent with the card's history, where online accounts for 67% of transactions, $100.09 is at or below the 95th-percentile amount of $999.98, product code R represents 56% of history, and the device profile has been seen 3 times. Case memory shows matches to closed cases CC-1383, CC-5172, CC-5181, and CC-5217, while remaining uncertainty notes the case rests on a single signal of an anonymising proxy and policy R1 applies. The verdict is legitimate with a fraud probability of 0.01 and a pattern of none, resulting in $0.00 exposure. The recommended actions are CREATE_CASE (auto), ALLOW_TRANSACTION (auto), and CLOSE_NO_FRAUD (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-017"
   },
   "evidence_requests": [
     {
       "type": "customer_validation",
-      "asked_after_step": 7,
+      "asked_after_step": 8,
       "assumed_response": "Simulated response: the cardholder confirms the transaction as their own."
     }
   ],
@@ -149,6 +149,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 12,
-  "tokens": 0,
-  "latency_s": 3.1
+  "tokens": 1260,
+  "latency_s": 3.0
 }

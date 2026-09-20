@@ -421,7 +421,14 @@ class InvestigationAgent:
 
     def _shared_origin(self, st, feats: F.Features) -> SharedOrigin | None:
         dr = st.ctx.device_ring or {}
-        cards = [c["card_id"] for c in (dr.get("cards") or []) if c.get("card_id") != feats.card_id]
+        # sorted, because device_neighbors returns its cards in whatever order
+        # the engine walked them and the evidence item cites only the first 25.
+        # Unsorted, the two backends named *different subsets* of the ring as
+        # evidence for the same case -- not merely the same cards reordered.
+        cards = sorted({
+            c["card_id"] for c in (dr.get("cards") or [])
+            if c.get("card_id") and c.get("card_id") != feats.card_id
+        })
         if feats.device_profile and len(cards) >= 2 and feats.ring_new_fraction >= 0.9 \
                 and feats.anonymous_proxy:
             known = (st.ctx.prior_cases_device or {}).get("cases") or []

@@ -46,27 +46,27 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-5202 (confirmed_fraud, pattern card_not_present_fraud, exposure $292.48) matches this alert on same typology (card_not_present_fraud) and comparable exposure.",
+        "claim": "Case memory: closed case CC-1845 (confirmed_fraud, pattern card_not_present_fraud, exposure $299.91) matches this alert on same typology (card_not_present_fraud) and comparable exposure.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
         "entity_ids": [
-          "CC-5202"
+          "CC-1845"
         ]
       },
       {
-        "claim": "Case memory: closed case CC-5484 (confirmed_fraud, pattern card_not_present_fraud, exposure $292.94) matches this alert on same typology (card_not_present_fraud) and comparable exposure.",
+        "claim": "Case memory: closed case CC-1955 (confirmed_fraud, pattern card_not_present_fraud, exposure $299.91) matches this alert on same typology (card_not_present_fraud) and comparable exposure.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
         "entity_ids": [
-          "CC-5484"
+          "CC-1955"
         ]
       },
       {
-        "claim": "Case memory: closed case CC-4624 (confirmed_fraud, pattern card_not_present_fraud, exposure $296.60) matches this alert on same typology (card_not_present_fraud) and comparable exposure.",
+        "claim": "Case memory: closed case CC-2681 (confirmed_fraud, pattern card_not_present_fraud, exposure $299.91) matches this alert on same typology (card_not_present_fraud) and comparable exposure.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
         "entity_ids": [
-          "CC-4624"
+          "CC-2681"
         ]
       },
       {
@@ -80,13 +80,13 @@
     ],
     "similar_prior_cases": [
       "CC-4160",
-      "CC-5202",
-      "CC-5484",
-      "CC-4624",
-      "CC-1743",
-      "CC-1955"
+      "CC-1845",
+      "CC-1955",
+      "CC-2681",
+      "CC-2805",
+      "CC-3666"
     ],
-    "summary": "Risk score on card C11891-K1: $292.36 online on 2016-11-22, scored 0.79 by the bank's model. $292.36 exceeds the card's historical maximum of $121.32. Case memory returned 6 comparable closed investigation(s) (CC-4160, CC-5202, CC-5484), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.37 with confidence 0.56; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
+    "summary": "Transaction 3478782 on card C11891-K1 for $292.36 online on 2016-11-22 17:27:07 was scored 0.79 by the bank's model and exceeds the card's historical maximum of $121.32. Case memory retrieved closed cases CC-4160, CC-1845, CC-1955, and CC-2681 matching on typology and comparable exposure. The verdict is uncertain with a probability of 0.37 and an exposure of $0.00, driven by missing identity and device records that prevented device and proxy tests. The recommended action is to CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-002"
   },
@@ -118,6 +118,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 0,
-  "latency_s": 2.18
+  "tokens": 964,
+  "latency_s": 2.48
 }

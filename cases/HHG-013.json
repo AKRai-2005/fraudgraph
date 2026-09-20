@@ -58,6 +58,22 @@
         ]
       },
       {
+        "claim": "Case memory: closed case CC-1475 (confirmed_fraud, pattern account_takeover, exposure $1,307.98) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=account_takeover, channel=online)",
+        "entity_ids": [
+          "CC-1475"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-3216 (confirmed_fraud, pattern card_not_present_new_device, exposure $449.97) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-3216"
+        ]
+      },
+      {
         "claim": "Case memory: closed case CC-3761 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=none, channel=online)",
@@ -72,33 +88,17 @@
         "entity_ids": [
           "CC-4294"
         ]
-      },
-      {
-        "claim": "Case memory: closed case CC-3216 (confirmed_fraud, pattern card_not_present_new_device, exposure $449.97) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
-        "entity_ids": [
-          "CC-3216"
-        ]
-      },
-      {
-        "claim": "Case memory: closed case CC-1475 (confirmed_fraud, pattern account_takeover, exposure $1,307.98) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=account_takeover, channel=online)",
-        "entity_ids": [
-          "CC-1475"
-        ]
       }
     ],
     "similar_prior_cases": [
+      "CC-1475",
+      "CC-3216",
       "CC-3761",
       "CC-4294",
-      "CC-3216",
-      "CC-1475",
-      "CC-0258",
-      "CC-0414"
+      "CC-1018",
+      "CC-2356"
     ],
-    "summary": "Risk score on card C07671-K2: $35.66 online on 2016-12-09, scored 0.76 by the bank's model. Online purchase from a device profile never seen on this card (13 devices previously seen), marked new for the account. Online accounts for only 1.5% of this card's history. Activity on both channels within 48 hours with 2 identity anomalies (new device=true, device marked new=true, match flag=n/a, proxy=none, new email domain=false). Case memory returned 6 comparable closed investigation(s) (CC-3761, CC-4294, CC-3216), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.71 on 3 independent signals, with exposure $35.66 across 1 transaction(s). Recommended: CREATE_CASE (auto).",
+    "summary": "Transaction 3526826 on card C07671-K2 for $35.66, occurring online on 2016-12-09 02:39:29 under product code C, was scored 0.76 by the bank's model and assessed as fraud with a probability of 0.71 under the account_takeover pattern. The established behaviour shows online purchases account for 1% to 1.5% of the 1,431 prior transactions, and this purchase involved a new device never seen among the 13 previously recorded devices. Case memory retrieved closed cases CC-1475, CC-3216, CC-3761, and CC-4294 matching prior investigations on this card. The total exposure is $35.66, and the recommended action is CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-013"
   },
@@ -130,6 +130,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 12,
-  "tokens": 0,
-  "latency_s": 3.34
+  "tokens": 1079,
+  "latency_s": 3.57
 }

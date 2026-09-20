@@ -40,22 +40,6 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-3422 (confirmed_fraud, pattern card_not_present_fraud, exposure $124.24) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
-        "entity_ids": [
-          "CC-3422"
-        ]
-      },
-      {
-        "claim": "Case memory: closed case CC-2716 (confirmed_fraud, pattern card_not_present_new_device, exposure $253.69) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
-        "entity_ids": [
-          "CC-2716"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-0056 (confirmed_fraud, pattern card_not_present_new_device, exposure $40.21) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
@@ -64,23 +48,39 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-1715 (confirmed_fraud, pattern card_not_present_new_device, exposure $553.72) matches this alert on a prior investigation on this exact card.",
+        "claim": "Case memory: closed case CC-0467 (confirmed_fraud, pattern card_not_present_new_device, exposure $649.77) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
         "entity_ids": [
-          "CC-1715"
+          "CC-0467"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0772 (confirmed_fraud, pattern card_not_present_new_device, exposure $183.27) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-0772"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-1293 (confirmed_fraud, pattern card_not_present_fraud, exposure $419.34) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=online)",
+        "entity_ids": [
+          "CC-1293"
         ]
       }
     ],
     "similar_prior_cases": [
-      "CC-3422",
-      "CC-2716",
       "CC-0056",
+      "CC-0467",
+      "CC-0772",
+      "CC-1293",
       "CC-1715",
-      "CC-4819",
-      "CC-4485"
+      "CC-1925"
     ],
-    "summary": "Customer report on card C13171-K2: $55.68 online on 2016-12-19, scored 0.38 by the bank's model. $55.68 is at or below the card's 95th-percentile amount ($161.27); online is 100% of this card's history; product code c is 100% of this card's history; device profile already seen 9 times on this card. Case memory returned 6 comparable closed investigation(s) (CC-3422, CC-2716, CC-0056), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 2 independent signals, with exposure $55.68 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Transaction 3558054 on card C13171-K2 for $55.68 on 2016-12-19 22:08:56 was online under product code C and scored 0.38 by the bank's model. This amount is at or below the card's 95th-percentile amount of $161.27, with online use and product code C each representing 100% of the card's history and the device profile seen 9 times before. Case memory includes closed cases CC-0056, CC-0467, CC-0772, and CC-1293 matching prior investigations on this card. The verdict is fraud with a probability of 0.80 under the pattern card_not_present_fraud, resulting in an exposure of $55.68. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-008"
   },
@@ -122,6 +122,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 0,
-  "latency_s": 2.44
+  "tokens": 1093,
+  "latency_s": 2.31
 }
