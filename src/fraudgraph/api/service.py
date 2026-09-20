@@ -6,6 +6,7 @@ graph query.  There are no hardcoded statistics.
 from __future__ import annotations
 
 import json
+import sys
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,8 +15,8 @@ from typing import Any
 import pandas as pd
 
 from ..agent.orchestrator import InvestigationAgent, Trigger
-from ..config import LLM, PATHS, TG
-from ..graph.store import GraphStore
+from ..config import LLM, PATHS, RUNTIME, TG
+from ..graph.store import GraphStore, GraphUnavailable
 from ..memory.case_memory import CaseMemory
 from ..policy import rules as R
 from ..policy.actions import WOULD_DO, MockActionService
@@ -33,7 +34,9 @@ def _jsonable(v: Any) -> Any:
 
 class CaseService:
     def __init__(self, backend: str | None = None, use_llm: bool = True):
-        self.store = GraphStore(prefer=backend) if backend else GraphStore()
+        self.degraded_from = ""     # what was asked for, if it could not be had
+        self.degraded_reason = ""
+        self.store = self._open_store(backend)
         self.memory = CaseMemory(self.store)
         narrator = None
         if use_llm:
@@ -43,6 +46,30 @@ class CaseService:
         self.narrator = narrator
         self.agent = InvestigationAgent(store=self.store, memory=self.memory, narrator=narrator)
         self.actions = MockActionService()
+
+    def _open_store(self, backend: str | None) -> GraphStore:
+        """Open the requested backend, degrading to the mirror *out loud*.
+
+        A console should keep working when the graph is asleep -- a Savanna
+        workspace suspends itself when idle, and an analyst staring at an error
+        page is worse than one reading records off disk. But the degradation
+        has to be a decision this layer makes and reports, not something the
+        store does quietly on its way past: the status strip, /api/health and
+        the log all name what was asked for and why it was not available.
+        """
+        want = backend or RUNTIME.graph_backend
+        try:
+            return GraphStore(prefer=want)
+        except GraphUnavailable as exc:
+            if want == "local":
+                raise
+            self.degraded_from, self.degraded_reason = want, str(exc)
+            print(
+                f"[fraudgraph] {want} backend unavailable, serving from the local "
+                f"mirror instead.\n             {str(exc)[:300]}",
+                file=sys.stderr,
+            )
+            return GraphStore(prefer="local")
 
     # ------------------------------------------------------------- storage
     @property
@@ -560,6 +587,10 @@ class CaseService:
         h = self.store.health()
         return {
             "graph": h,
+            # what was asked for and could not be had, so the console can say
+            # so rather than just showing a backend nobody chose
+            "degraded_from": self.degraded_from,
+            "degraded_reason": self.degraded_reason[:300],
             "tigergraph_configured": TG.configured,
             "tigergraph_host": (TG.host.split("//")[-1][:40] + "...") if TG.host else "",
             "llm": {

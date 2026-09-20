@@ -96,7 +96,12 @@ async function loadHealth() {
       `<span class="pill warn">Actions <b>simulated</b></span>`,
     ];
     if (!tgLive) {
-      parts.push(`<span class="pill warn" title="TigerGraph is the system of record; the local mirror serves the same query catalogue for development.">TigerGraph <b>${h.tigergraph_configured ? 'configured, unreachable' : 'not configured'}</b></span>`);
+      // name what was asked for and why it was not available, rather than
+      // just showing a backend nobody chose
+      const why = h.degraded_from
+        ? `${esc(h.degraded_from)} requested, unavailable`
+        : (h.tigergraph_configured ? 'configured, unreachable' : 'not configured');
+      parts.push(`<span class="pill warn" title="${esc(h.degraded_reason || 'TigerGraph is the system of record; the local mirror serves the same query catalogue for development.')}">TigerGraph <b>${why}</b></span>`);
     }
     strip.innerHTML = parts.join('');
   } catch (e) {

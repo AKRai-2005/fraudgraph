@@ -59,6 +59,17 @@ class GraphStore:
     # ------------------------------------------------------------ resolution
     @staticmethod
     def _resolve(prefer: str) -> GraphBackend:
+        """Pick a backend.
+
+        ``local`` / ``tigergraph`` / ``mcp`` are requests, and an unmet request
+        raises. Only ``auto`` falls back.
+
+        This used to fall through to the local mirror whenever TigerGraph's
+        ping returned falsy without throwing -- so ``--backend tigergraph``
+        against a suspended workspace quietly produced answer files computed on
+        pandas. Regenerating the deliverable "on TigerGraph" could then silently
+        not have been.
+        """
         from .local_mirror import get_local_backend
 
         if prefer == "local":
@@ -73,20 +84,30 @@ class GraphStore:
                     f"TigerGraph MCP backend requested but not usable: {health.get('error')}"
                 )
             return be
-        if prefer in ("tigergraph", "auto"):
+        if prefer == "tigergraph":
+            from .tigergraph import TigerGraphBackend
+
+            try:
+                be = TigerGraphBackend()
+                health = be.ping()
+            except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+                raise GraphUnavailable(
+                    f"TigerGraph backend requested but unavailable: {exc}"
+                ) from exc
+            if not health.get("ok"):
+                raise GraphUnavailable(
+                    f"TigerGraph backend requested but not usable: {health.get('error')}"
+                )
+            return be
+        if prefer == "auto":
             try:
                 from .tigergraph import TigerGraphBackend
 
                 be = TigerGraphBackend()
                 if be.ping().get("ok"):
                     return be
-            except Exception as exc:  # noqa: BLE001 - any failure falls back
-                if prefer == "tigergraph":
-                    raise GraphUnavailable(
-                        f"TigerGraph backend requested but unavailable: {exc}"
-                    ) from exc
-            if prefer == "auto":
-                return get_local_backend()
+            except Exception:  # noqa: BLE001 - auto is allowed to fall back
+                pass
         return get_local_backend()
 
     @property

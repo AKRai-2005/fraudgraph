@@ -258,3 +258,57 @@ def test_interrupted_investigation_leaves_no_partial_answer_file(tmp_path):
         runmod.build_agent = orig
     assert summary["cases_written"] == 0
     assert summary["errors"] and summary["errors"][0]["case_id"] == "HHG-001"
+
+
+# --------------------------------------------------- backend resolution
+def test_requesting_tigergraph_when_it_is_down_raises_rather_than_downgrading():
+    """`--backend tigergraph` must never quietly compute on pandas.
+
+    _resolve used to fall through to the local mirror whenever the ping
+    returned falsy without throwing, so regenerating the deliverable "on
+    TigerGraph" against a suspended workspace silently would not have been.
+    """
+    from fraudgraph.graph.store import GraphStore, GraphUnavailable
+
+    class Dead:
+        name = "tigergraph"
+
+        def ping(self):
+            return {"ok": False, "error": "workspace suspended"}
+
+    import fraudgraph.graph.tigergraph as tg_mod
+
+    original = tg_mod.TigerGraphBackend
+    tg_mod.TigerGraphBackend = Dead
+    try:
+        with pytest.raises(GraphUnavailable) as err:
+            GraphStore(prefer="tigergraph")
+        assert "suspended" in str(err.value)
+        # auto, by contrast, is allowed to fall back
+        assert GraphStore(prefer="auto").backend_name == "local"
+    finally:
+        tg_mod.TigerGraphBackend = original
+
+
+def test_the_console_degrades_to_the_mirror_but_records_that_it_did():
+    from fraudgraph.api.service import CaseService
+    from fraudgraph.graph.store import GraphUnavailable
+    import fraudgraph.api.service as service_mod
+
+    real = service_mod.GraphStore
+
+    class Refusing(real):
+        def __init__(self, backend=None, prefer=None, on_call=None):
+            if prefer == "tigergraph":
+                raise GraphUnavailable("workspace suspended")
+            super().__init__(backend=backend, prefer=prefer, on_call=on_call)
+
+    service_mod.GraphStore = Refusing
+    try:
+        svc = CaseService(backend="tigergraph", use_llm=False)
+        assert svc.store.backend_name == "local"
+        assert svc.degraded_from == "tigergraph"
+        assert "suspended" in svc.degraded_reason
+        assert svc.health()["degraded_from"] == "tigergraph"
+    finally:
+        service_mod.GraphStore = real

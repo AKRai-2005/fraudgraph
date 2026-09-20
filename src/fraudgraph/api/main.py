@@ -5,6 +5,7 @@ Run:  python -m fraudgraph.api.main
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 
@@ -19,10 +20,29 @@ from .service import CaseService
 
 FRONTEND = Path(__file__).resolve().parents[3] / "frontend"
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Build the service before the first browser request, not during it.
+
+    Resolving the backend costs about 3 seconds when the Savanna workspace is
+    suspended -- the ping has to time out before falling back to the local
+    mirror -- and the parquet cache costs another 0.8s on first touch. Paid
+    lazily, both landed on whoever opened the page first.
+    """
+    service = svc()
+    service.store.health()
+    print(f"[fraudgraph] ready on {RUNTIME.api_host}:{RUNTIME.api_port} "
+          f"(graph: {service.store.backend_name}"
+          f"{', degraded from ' + service.degraded_from if service.degraded_from else ''})")
+    yield
+
+
 app = FastAPI(
     title="Agentic Fraud Investigation",
     description="Graph-grounded fraud investigation agent on TigerGraph (HHGOA IEEE-CIS).",
     version="1.0.0",
+    lifespan=lifespan,
 )
 # The console is same-origin, so it needs no CORS at all; the allowance exists
 # only so the API can be poked from a separate dev server.  It used to be
