@@ -77,6 +77,15 @@ def case_detail(case_id: str):
     return rec
 
 
+@app.get("/api/cases/{case_id}/published")
+def published(case_id: str):
+    """The submitted answer file, as it sits on disk in ``cases/``."""
+    ans = svc().published_answer(case_id)
+    if ans is None:
+        raise HTTPException(404, f"{case_id} has no published answer file")
+    return ans
+
+
 @app.get("/api/cases/{case_id}/graph")
 def case_graph(case_id: str, max_nodes: int = 160):
     return svc().case_graph(case_id, max_nodes=max_nodes)

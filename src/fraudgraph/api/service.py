@@ -24,6 +24,13 @@ from ..schemas import Action
 _LOCK = threading.Lock()
 
 
+def _jsonable(v: Any) -> Any:
+    """Diff values reach the browser, so keep them small and serialisable."""
+    if isinstance(v, (str, int, float, bool)) or v is None:
+        return v if not isinstance(v, str) else v[:300]
+    return str(v)[:300]
+
+
 class CaseService:
     def __init__(self, backend: str | None = None, use_llm: bool = True):
         self.store = GraphStore(prefer=backend) if backend else GraphStore()
@@ -84,9 +91,19 @@ class CaseService:
 
     # ------------------------------------------------------------ case pack
     def case_pack(self) -> list[dict]:
+        """The 20 alerts as triggered, straight from the challenge's CSV.
+
+        ``.where(pd.notna(cp), None)`` looks like it nulls the gaps and does
+        not: on a float column None coerces straight back to NaN, which is not
+        valid JSON, so this endpoint answered 500 for the nine rows whose
+        ``risk_score`` is blank (the customer-report and analyst-request
+        triggers, which carry no model score by definition).
+        """
         cp = pd.read_csv(PATHS.case_pack_csv)
-        cp = cp.where(pd.notna(cp), None)
-        return cp.to_dict("records")
+        return [
+            {k: (None if pd.isna(v) else v) for k, v in row.items()}
+            for row in cp.to_dict("records")
+        ]
 
     # ------------------------------------------------------------- overview
     def overview(self) -> dict:
@@ -213,6 +230,7 @@ class CaseService:
         rec["policy_rules"] = {k: v.summary for k, v in R.RULES.items()}
         rec["action_effects"] = {a.value: WOULD_DO.get(a, "") for a in Action}
         rec["executions"] = self.actions.history(case_id=case_id)
+        rec["drift"] = self.drift(case_id, rec.get("answer") or {})
         return rec
 
     # -------------------------------------------------------------- graph
@@ -298,6 +316,22 @@ class CaseService:
 
     # --------------------------------------------------------- investigate
     def investigate(self, case_id: str) -> dict:
+        """Re-run one case live. Deliberately does NOT touch ``cases/``.
+
+        ``cases/`` holds the published answer files -- the deliverable. They
+        are written by one explicit, auditable command
+        (``python -m fraudgraph.benchmark.run``) and by nothing else.
+
+        This used to overwrite them. A single click in the dashboard, with the
+        Savanna workspace asleep so the store had fallen back to the local
+        mirror, silently rewrote a published answer: its cited prior case
+        changed and ``written_to_graph`` flipped to false. A console that can
+        quietly edit the thing it is meant to display is not an audit trail.
+
+        So a re-run produces a *working record* instead, tagged with which
+        backend served it, and the published answer is diffed against it so
+        the console can say plainly when the two have drifted apart.
+        """
         pack = {p["case_id"]: p for p in self.case_pack()}
         if case_id not in pack:
             raise KeyError(case_id)
@@ -305,11 +339,44 @@ class CaseService:
             answer = self.agent.investigate(Trigger.from_case_pack_row(pack[case_id]))
             from ..benchmark.run import _write_internal
 
-            (PATHS.cases_out / f"{case_id}.json").write_text(
-                json.dumps(answer.to_answer_dict(), indent=2), encoding="utf-8"
-            )
-            _write_internal(answer)
+            _write_internal(answer, provenance={
+                "kind": "rerun",
+                "backend": self.store.backend_name,
+                "llm": bool(getattr(self.narrator, "enabled", False)),
+                "at": datetime.now(timezone.utc).isoformat(),
+            })
         return self.load_record(case_id) or {}
+
+    # ------------------------------------------------- published vs working
+    def published_answer(self, case_id: str) -> dict | None:
+        """The answer file as submitted, straight off disk."""
+        p = PATHS.cases_out / f"{case_id}.json"
+        if not p.exists():
+            return None
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+
+    def drift(self, case_id: str, working: dict) -> dict:
+        """How the working record differs from the published answer file."""
+        published = self.published_answer(case_id)
+        if published is None:
+            return {"published": False, "matches": None, "differences": []}
+        from ..benchmark.compare import ComparisonResult, compare_answers
+
+        res = ComparisonResult("published", "this run")
+        compare_answers(published, working, case_id, res)
+        return {
+            "published": True,
+            "matches": res.agree,
+            "differences": [
+                {"path": d.path, "published": _jsonable(d.left), "current": _jsonable(d.right)}
+                for d in res.differences[:40]
+            ],
+            "n_differences": len(res.differences),
+            "expected_differences": sorted({d.path.split("[")[0] for d in res.ignored}),
+        }
 
     def investigate_adhoc(self, txn_id: str, note: str = "") -> dict:
         """Analyst-initiated investigation of any transaction in the graph."""

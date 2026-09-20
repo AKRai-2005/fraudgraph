@@ -100,8 +100,14 @@ def run_all(backend: str = "auto", use_llm: bool = True, only: list[str] | None 
     return summary
 
 
-def _write_internal(answer: AnswerFile) -> None:
-    """The full internal record: audit trail, findings, risk breakdown."""
+def _write_internal(answer: AnswerFile, provenance: dict | None = None) -> None:
+    """The full internal record: audit trail, findings, risk breakdown.
+
+    ``provenance`` says how this record came to exist. The benchmark runner
+    leaves it as ``published``; the dashboard's live re-run marks itself as a
+    re-run and names the backend that served it, so a record produced while
+    TigerGraph was asleep cannot be mistaken for the submitted answer.
+    """
     d = PATHS.build / "case_records"
     d.mkdir(parents=True, exist_ok=True)
     flagged_ts = ""
@@ -116,6 +122,7 @@ def _write_internal(answer: AnswerFile) -> None:
     blob = {
         "case_id": answer.case_id,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "provenance": provenance or {"kind": "published"},
         "flagged_ts": flagged_ts,
         "trigger": answer.trigger,
         "answer": answer.to_answer_dict(),
