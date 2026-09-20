@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def client():
+def client(isolated_records):
     from fastapi.testclient import TestClient
 
     from fraudgraph.api import main as api_main
@@ -322,3 +322,19 @@ def test_adhoc_investigations_do_not_inflate_the_benchmark_counts(client):
     rows = client.get("/api/queue").json()
     adhoc = [x for x in rows if x["adhoc"]]
     assert adhoc, "an ad-hoc investigation vanished from the queue"
+
+
+def test_the_test_suite_writes_only_to_its_own_records_dir(client, isolated_records):
+    """Running the tests must not degrade the console it is testing.
+
+    These tests re-run cases on the local mirror, which honestly records
+    written_to_graph: false. Pointed at the real build/case_records/, that
+    dropped the overview from 20 cases written to the graph to 18 -- the
+    numbers were right about the records on disk, and the records were the
+    test suite's leftovers.
+    """
+    from fraudgraph.api import service as service_mod
+
+    assert service_mod.PATHS.records == isolated_records
+    client.post(f"/api/cases/{_case_ids()[0]}/investigate")
+    assert list(isolated_records.glob("*.json")), "the re-run wrote somewhere else"

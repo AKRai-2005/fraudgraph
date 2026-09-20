@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def client():
+def client(isolated_records):
     from fastapi.testclient import TestClient
 
     from fraudgraph.api import main as api_main
