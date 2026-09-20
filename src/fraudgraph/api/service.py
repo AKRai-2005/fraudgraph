@@ -563,8 +563,26 @@ class CaseService:
 
     # --------------------------------------------------------------- memory
     def memory_view(self, limit: int = 40) -> dict:
+        """Historical case memory, and what this agent has added to it.
+
+        The agent journal (``build/agent_cases.jsonl``) is append-only by
+        design: it is the record of every write *attempt*, which is what makes
+        it an audit trail. It is not a case list, and presenting it as one
+        counted 200 "agent-written cases" where there are 20 -- every re-run
+        had appended another entry, and the table showed HHG-014 six times.
+        So the journal is collapsed to the latest entry per case here, and the
+        raw count is reported separately as what it actually is.
+        """
         cc = pd.read_parquet(PATHS.closed_cases_parquet)
-        agent_cases = self.memory.read_agent_cases(limit=200)
+        journal = self.memory.read_agent_cases(limit=2000)
+        latest: dict[str, dict] = {}
+        for entry in journal:                       # oldest first, so the last wins
+            case = entry.get("case", entry)
+            cid = case.get("case_id") or entry.get("case_id")
+            if cid:
+                latest[cid] = entry
+        cases = list(latest.values())
+        cases.sort(key=lambda e: str(e.get("at") or ""), reverse=True)
         return {
             "historical": {
                 "total": int(len(cc)),
@@ -574,11 +592,10 @@ class CaseService:
                 "date_range": [str(cc.opened_at.min())[:10], str(cc.closed_at.max())[:10]],
             },
             "agent_written": {
-                "total": len(agent_cases),
-                "written_to_graph": sum(
-                    1 for c in agent_cases if c.get("written_to_graph") or c.get("source") == "agent"
-                ),
-                "cases": agent_cases[-limit:],
+                "total": len(cases),
+                "write_attempts_logged": len(journal),
+                "written_to_graph": sum(1 for e in cases if e.get("written_to_graph")),
+                "cases": cases[:limit],
             },
         }
 

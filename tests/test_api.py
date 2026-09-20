@@ -267,3 +267,31 @@ def test_cors_still_admits_the_console_itself(client):
         "access-control-request-headers": "content-type",
     })
     assert r.headers.get("access-control-allow-origin") == origin
+
+
+def test_memory_counts_cases_not_journal_entries(client):
+    """The journal is append-only; presenting it as a case list overcounts.
+
+    Every re-run appends another entry, so the view reported 200 agent-written
+    cases where there are 20, and listed HHG-014 six times.
+    """
+    m = client.get("/api/memory").json()
+    ag = m["agent_written"]
+    ids = [(e.get("case") or e).get("case_id") for e in ag["cases"]]
+    assert len(ids) == len(set(ids)), f"the same case is listed twice: {ids}"
+    assert ag["total"] == len(set(i for i in ids if i)) or ag["total"] >= len(ids)
+    assert ag["write_attempts_logged"] >= ag["total"], \
+        "the raw journal count must be reported separately, not as the case count"
+
+
+def test_memory_does_not_claim_writes_the_graph_refused(client):
+    m = client.get("/api/memory").json()["agent_written"]
+    for entry in m["cases"]:
+        if entry.get("written_to_graph"):
+            assert (entry.get("case") or entry).get("graph_case_id"), \
+                "a case claimed as persisted must carry the id it was persisted under"
+
+
+def test_head_on_the_console_is_allowed(client):
+    """A health checker doing HEAD / used to get 405."""
+    assert client.head("/").status_code == 200

@@ -837,10 +837,18 @@ async function loadMemory() {
           <h2>Agent-written cases</h2>
           <p class="panel-hint">Investigations this system closed. These become memory for the next alert.</p>
           <div class="facts">
-            ${fact('Written', ag.total)}
-            ${fact('Persisted in TigerGraph', ag.written_to_graph)}
+            ${fact('Distinct cases', ag.total)}
+            ${fact('Persisted in TigerGraph', ag.written_to_graph,
+                   ag.written_to_graph ? 'var(--legit)' : 'var(--uncertain)')}
+            ${fact('Write attempts logged', ag.write_attempts_logged)}
           </div>
+          <p class="panel-hint">The journal is append-only, so a case re-run several
+            times has several entries; the table below shows the latest per case.</p>
           ${ag.total === 0 ? '<div class="muted">No agent cases yet.</div>' : ''}
+          ${ag.written_to_graph === 0 && ag.total
+            ? `<div class="warnbox">None of these are in TigerGraph. The local mirror is
+                read-only and reports the write as refused rather than claiming one it
+                did not make.</div>` : ''}
         </div>
       </div>
       <div class="panel">
@@ -848,7 +856,7 @@ async function loadMemory() {
         <div class="table-wrap"><table><thead><tr>
           <th>Case</th><th>Verdict</th><th>p(fraud)</th><th>Pattern</th><th>Exposure</th><th>In graph</th>
         </tr></thead><tbody>
-        ${(ag.cases || []).slice().reverse().map((row) => {
+        ${(ag.cases || []).map((row) => {
           const cse = row.case || row;
           return `<tr><td class="mono">${esc(cse.case_id || cse.graph_case_id)}</td>
             <td><span class="tag ${esc(cse.verdict)}">${esc(cse.verdict)}</span></td>

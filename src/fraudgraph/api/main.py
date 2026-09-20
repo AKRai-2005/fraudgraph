@@ -233,6 +233,7 @@ def _asset_version() -> str:
 
 
 if FRONTEND.exists():
+    @app.head("/")
     @app.get("/")
     def index():
         f = FRONTEND / "index.html"
