@@ -45,9 +45,15 @@ def _summarise(name: str, result: Any) -> str:
 class GraphStore:
     """Dispatches named queries to a backend and logs every call."""
 
-    def __init__(self, backend: GraphBackend | None = None, prefer: str | None = None):
+    def __init__(self, backend: GraphBackend | None = None, prefer: str | None = None,
+                 on_call: Any = None):
         self.ledger: list[ToolCall] = []
         self._step = 0
+        # Optional observer, called with each ToolCall as it completes. The
+        # console streams these so an investigation can be watched query by
+        # query; it is a listener, never a participant, so it cannot change a
+        # result and its exceptions are swallowed.
+        self.on_call = on_call
         self.backend = backend or self._resolve(prefer or RUNTIME.graph_backend)
 
     # ------------------------------------------------------------ resolution
@@ -104,11 +110,13 @@ class GraphStore:
         fn = getattr(self.backend, name, None)
         t0 = time.perf_counter()
         if fn is None:
-            self.ledger.append(ToolCall(
+            entry = ToolCall(
                 step=self._step, name=name, params=params, backend=self.backend_name,
                 ref=ref, ok=False, error=f"backend {self.backend_name} does not implement {name}",
                 duration_ms=0.0, result_summary="unavailable",
-            ))
+            )
+            self.ledger.append(entry)
+            self._emit(entry)
             return {"error": f"query {name} not available on backend {self.backend_name}"}
         try:
             result = fn(**params)
@@ -116,12 +124,22 @@ class GraphStore:
         except Exception as exc:  # noqa: BLE001 - surfaced as a recorded gap
             result, ok, err = {"error": str(exc)}, False, f"{type(exc).__name__}: {exc}"
         dt = (time.perf_counter() - t0) * 1000.0
-        self.ledger.append(ToolCall(
+        entry = ToolCall(
             step=self._step, name=name, params={k: str(v)[:120] for k, v in params.items()},
             backend=self.backend_name, ref=ref, ok=ok, error=err, duration_ms=round(dt, 2),
             result_summary=_summarise(name, result) if ok else (err or "failed"),
-        ))
+        )
+        self.ledger.append(entry)
+        self._emit(entry)
         return result
+
+    def _emit(self, entry: ToolCall) -> None:
+        if self.on_call is None:
+            return
+        try:
+            self.on_call(entry)
+        except Exception:  # noqa: BLE001 - an observer cannot break a query
+            pass
 
     def ref(self, name: str, **params) -> str:
         return spec(name).ref(**params)

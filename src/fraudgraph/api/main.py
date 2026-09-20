@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -105,6 +105,29 @@ def investigate(case_id: str):
         raise HTTPException(404, f"{case_id} is not in the case pack") from None
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(500, f"investigation failed: {type(exc).__name__}: {exc}") from None
+
+
+@app.get("/api/cases/{case_id}/investigate/stream")
+def investigate_stream(case_id: str):
+    """Re-run a case and stream each reasoning step and graph call as it happens."""
+    from .stream import InvestigationStream
+
+    service = svc()
+    if case_id not in {p["case_id"] for p in service.case_pack()}:
+        raise HTTPException(404, f"{case_id} is not in the case pack")
+    stream = InvestigationStream(
+        service, case_id,
+        lambda on_step, on_call: service.investigate_streaming(case_id, on_step, on_call),
+    )
+    return StreamingResponse(
+        stream.events(),
+        media_type="text/event-stream",
+        headers={
+            "cache-control": "no-cache, no-transform",
+            "x-accel-buffering": "no",   # nginx would otherwise buffer the whole stream
+            "connection": "keep-alive",
+        },
+    )
 
 
 @app.post("/api/investigate-adhoc")

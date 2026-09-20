@@ -126,10 +126,30 @@
   <!-- =========================== WORKSPACE ============================ -->
   <section id="view-case" class="view">
     <div class="case-picker">
-      <select id="casePicker"></select>
-      <button id="rerunBtn" class="btn">Re-run investigation</button>
-      <span id="caseMsg" class="muted"></span>
+      <select id="casePicker" aria-label="Case to open"></select>
+      <button id="watchBtn" class="btn">&#9654;&nbsp; Watch it investigate</button>
+      <button id="rerunBtn" class="btn ghost">Re-run quietly</button>
+      <span id="caseMsg" class="muted" role="status" aria-live="polite"></span>
     </div>
+
+    <section id="livePanel" class="panel live" hidden aria-label="Live investigation">
+      <div class="panel-head">
+        <div>
+          <h2>Investigating <span id="liveCase" class="mono"></span>
+            <span id="liveState" class="tag">running</span></h2>
+          <p class="panel-hint">Every line below is emitted as it happens &mdash; the
+            agent's own reasoning steps, and each graph query with the time it
+            really took. Nothing is replayed from the answer file.</p>
+        </div>
+        <div class="live-counters">
+          <span><b id="liveSteps">0</b> steps</span>
+          <span><b id="liveQueries">0</b> graph calls</span>
+          <span><b id="liveMs">0</b> ms in the graph</span>
+          <span class="muted" id="liveBackend"></span>
+        </div>
+      </div>
+      <div id="liveFeed" class="live-feed"></div>
+    </section>
     <div id="caseBody" class="case-body">
       <div class="empty">Select a case from the queue.</div>
     </div>

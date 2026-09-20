@@ -423,22 +423,13 @@ $('#adhocBtn').addEventListener('click', async () => {
 
 /* ============================================================ workspace */
 $('#casePicker').addEventListener('change', (e) => openCase(e.target.value));
-$('#rerunBtn').addEventListener('click', async () => {
-  const id = $('#casePicker').value;
-  if (!id) return;
-  $('#caseMsg').innerHTML = '<span class="spinner"></span> re-running&hellip;';
-  try {
-    const rec = await api(`/api/cases/${encodeURIComponent(id)}/investigate`, { method: 'POST' });
-    $('#caseMsg').textContent = '';
-    await loadQueue();
-    renderCase(rec);
-    toast(`${id} re-investigated`);
-  } catch (e) { $('#caseMsg').textContent = 'Failed: ' + e.message; }
-});
+$('#rerunBtn').addEventListener('click', () => rerunQuietly($('#casePicker').value));
 
 async function openCase(id) {
   show('case');
   $('#casePicker').value = id;
+  if (live.es) { live.es.close(); live.es = null; }
+  if ($('#liveCase') && $('#liveCase').textContent !== id) $('#livePanel').hidden = true;
   $('#caseBody').innerHTML = '<div class="empty"><span class="spinner"></span> loading&hellip;</div>';
   try {
     const rec = await api('/api/cases/' + encodeURIComponent(id));
@@ -982,3 +973,145 @@ window.addEventListener('resize', () => {
     if (state.graph && state.current) drawGraph(state.graph);
   }, 180);
 });
+
+/* ====================================================== live investigation
+ * An answer file is the result. This is the work: each reasoning step and
+ * each graph query arriving over SSE as the agent actually runs.
+ *
+ * Lines are revealed on a short stagger because a whole investigation takes
+ * about a second against the local mirror and is otherwise unreadable. The
+ * *timings shown are the real ones* -- the stagger paces the reveal, never
+ * the numbers.
+ */
+const LIVE_STAGGER_MS = 150;
+
+const live = {
+  es: null, queue: [], timer: null, steps: 0, queries: 0, ms: 0,
+  startedAt: 0, done: null, finished: false,
+};
+
+function liveReset(caseId) {
+  live.queue = []; live.steps = 0; live.queries = 0; live.ms = 0;
+  live.done = null; live.finished = false; live.startedAt = performance.now();
+  clearInterval(live.timer); live.timer = null;
+  $('#liveCase').textContent = caseId;
+  $('#liveFeed').innerHTML = '';
+  $('#liveSteps').textContent = '0';
+  $('#liveQueries').textContent = '0';
+  $('#liveMs').textContent = '0';
+  $('#liveBackend').textContent = '';
+  setLiveState('running', 'running');
+  $('#livePanel').hidden = false;
+}
+
+function setLiveState(text, cls) {
+  const n = $('#liveState');
+  n.textContent = text;
+  n.className = 'tag ' + (cls || '');
+}
+
+function liveEnqueue(kind, payload) {
+  live.queue.push({ kind, payload });
+  if (!live.timer) live.timer = setInterval(liveDrain, LIVE_STAGGER_MS);
+}
+
+function liveDrain() {
+  const item = live.queue.shift();
+  if (!item) {
+    if (live.finished) { clearInterval(live.timer); live.timer = null; liveFinish(); }
+    return;
+  }
+  const feed = $('#liveFeed');
+  const row = document.createElement('div');
+  if (item.kind === 'query') {
+    const q = item.payload;
+    live.queries += 1;
+    live.ms += Number(q.duration_ms || 0);
+    row.className = 'lf q' + (q.ok ? '' : ' bad');
+    row.innerHTML = `<span class="lf-k">graph</span>
+      <span class="lf-ref mono">${esc(q.ref)}</span>
+      <span class="lf-res">${esc(q.ok ? (q.summary || '') : ('failed: ' + (q.error || '')))}</span>
+      <span class="lf-ms">${Number(q.duration_ms || 0).toFixed(1)} ms</span>`;
+    $('#liveQueries').textContent = live.queries;
+    $('#liveMs').textContent = Math.round(live.ms);
+  } else {
+    const s = item.payload;
+    live.steps += 1;
+    row.className = 'lf s kind-' + esc(s.kind);
+    row.innerHTML = `<span class="lf-k">${esc(s.kind)}</span>
+      <span class="lf-detail">${esc(s.detail)}</span>`;
+    $('#liveSteps').textContent = live.steps;
+  }
+  feed.appendChild(row);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function liveFinish() {
+  if (live.done) {
+    const a = live.done.answer || {};
+    const c = a.case || {};
+    // The agent's own measured latency, NOT the wall clock in this browser:
+    // that includes LIVE_STAGGER_MS per revealed line and would overstate the
+    // investigation severalfold.
+    const secs = Number(a.latency_s || 0).toFixed(2);
+    setLiveState(`${c.verdict || 'done'} \u00b7 p=${Number(c.fraud_probability || 0).toFixed(2)} \u00b7 ${secs}s`,
+      esc(c.verdict || ''));
+    renderCase(live.done);
+    loadQueue();
+  } else {
+    setLiveState('failed', 'fraud');
+  }
+  $('#caseMsg').textContent = '';
+  $('#watchBtn').disabled = false;
+}
+
+function watchInvestigation(caseId) {
+  if (!caseId) return;
+  if (live.es) live.es.close();
+  if (typeof EventSource === 'undefined') {
+    toast('This browser has no EventSource; falling back to a quiet re-run.');
+    return rerunQuietly(caseId);
+  }
+  liveReset(caseId);
+  $('#watchBtn').disabled = true;
+  const es = new EventSource(`/api/cases/${encodeURIComponent(caseId)}/investigate/stream`);
+  live.es = es;
+
+  es.addEventListener('open', (e) => {
+    try { $('#liveBackend').textContent = 'backend: ' + JSON.parse(e.data).backend; }
+    catch (err) { /* the browser's own open event carries no data */ }
+  });
+  es.addEventListener('step', (e) => liveEnqueue('step', JSON.parse(e.data)));
+  es.addEventListener('query', (e) => liveEnqueue('query', JSON.parse(e.data)));
+  es.addEventListener('done', (e) => {
+    live.done = JSON.parse(e.data);
+    live.finished = true;
+    es.close(); live.es = null;
+    if (!live.timer) liveFinish();
+  });
+  es.addEventListener('error', (e) => {
+    let msg = 'the connection dropped';
+    try { msg = JSON.parse(e.data).message; } catch (err) { /* transport-level error */ }
+    live.finished = true;
+    es.close(); live.es = null;
+    clearInterval(live.timer); live.timer = null;
+    setLiveState('failed', 'fraud');
+    $('#liveFeed').insertAdjacentHTML('beforeend',
+      `<div class="lf s bad"><span class="lf-k">error</span><span class="lf-detail">${esc(msg)}</span></div>`);
+    $('#watchBtn').disabled = false;
+    $('#caseMsg').textContent = '';
+  });
+}
+
+async function rerunQuietly(caseId) {
+  $('#caseMsg').innerHTML = '<span class="spinner"></span> re-running&hellip;';
+  try {
+    const rec = await api(`/api/cases/${encodeURIComponent(caseId)}/investigate`, { method: 'POST' });
+    $('#caseMsg').textContent = '';
+    await loadQueue();
+    renderCase(rec);
+    toast(`${caseId} re-investigated`);
+  } catch (e) { $('#caseMsg').textContent = 'Failed: ' + e.message; }
+}
+
+$('#watchBtn').addEventListener('click', () => watchInvestigation($('#casePicker').value));

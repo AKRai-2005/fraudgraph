@@ -15,6 +15,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Callable
 
 import pandas as pd
 
@@ -72,12 +73,20 @@ class InvestigationState:
     findings: list[PatternFinding] = field(default_factory=list)
     episodes: dict = field(default_factory=dict)
     stop_reason: str = ""
+    # Optional observer, called once per timeline entry as it happens. The
+    # console uses it to stream an investigation while it runs; it must never
+    # be able to change the outcome, so its exceptions are swallowed.
+    on_step: Callable[[TimelineEntry], None] | None = None
 
     def log(self, kind: str, detail: str, **data) -> None:
         self.step += 1
-        self.timeline.append(
-            TimelineEntry(step=self.step, kind=kind, detail=detail, data=data)
-        )
+        entry = TimelineEntry(step=self.step, kind=kind, detail=detail, data=data)
+        self.timeline.append(entry)
+        if self.on_step is not None:
+            try:
+                self.on_step(entry)
+            except Exception:  # noqa: BLE001 - an observer cannot break a case
+                pass
 
 
 class InvestigationAgent:
@@ -89,12 +98,14 @@ class InvestigationAgent:
         memory: CaseMemory | None = None,
         narrator=None,
         simulator: EvidenceRequestSimulator | None = None,
+        on_step: Callable[[TimelineEntry], None] | None = None,
     ):
         self.store = store or GraphStore()
         self.memory = memory or CaseMemory(self.store)
         self.policy = PolicyEngine()
         self.simulator = simulator or EvidenceRequestSimulator()
         self.narrator = narrator  # optional LLM narrator; None -> template writer
+        self.on_step = on_step
 
     # ------------------------------------------------------------------ run
     def investigate(self, trigger: Trigger) -> AnswerFile:
@@ -106,7 +117,8 @@ class InvestigationAgent:
         self.store.reset()
         inv_id = f"INV-{datetime.now(timezone.utc):%Y%m%d}-{uuid.uuid4().hex[:8]}"
         ctx = F.CaseContext(case_id=trigger.case_id, trigger=trigger.__dict__)
-        st = InvestigationState(trigger=trigger, investigation_id=inv_id, ctx=ctx)
+        st = InvestigationState(trigger=trigger, investigation_id=inv_id, ctx=ctx,
+                                on_step=self.on_step)
 
         st.log("trigger", f"{trigger.trigger_type} alert opened: {trigger.trigger_text}",
                investigation_id=inv_id, flagged_txn_id=trigger.flagged_txn_id,

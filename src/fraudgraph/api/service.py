@@ -424,6 +424,34 @@ class CaseService:
             })
         return self.load_record(case_id) or {}
 
+    def investigate_streaming(self, case_id: str, on_step, on_call) -> dict:
+        """``investigate``, with two observers attached for the SSE stream.
+
+        A separate agent and store are built per stream so two analysts
+        watching two investigations do not interleave each other's steps --
+        the observers hang off the instance, not the call.
+        """
+        pack = {p["case_id"]: p for p in self.case_pack()}
+        if case_id not in pack:
+            raise KeyError(case_id)
+        store = GraphStore(backend=self.store.backend, on_call=on_call)
+        agent = InvestigationAgent(
+            store=store, memory=CaseMemory(store), narrator=self.narrator,
+            on_step=on_step,
+        )
+        with _LOCK:
+            answer = agent.investigate(Trigger.from_case_pack_row(pack[case_id]))
+            from ..benchmark.run import _write_internal
+
+            _write_internal(answer, provenance={
+                "kind": "rerun",
+                "backend": store.backend_name,
+                "llm": bool(getattr(self.narrator, "enabled", False)),
+                "streamed": True,
+                "at": datetime.now(timezone.utc).isoformat(),
+            })
+        return self.case_detail(case_id) or {}
+
     # ------------------------------------------------- published vs working
     def published_answer(self, case_id: str) -> dict | None:
         """The answer file as submitted, straight off disk."""
