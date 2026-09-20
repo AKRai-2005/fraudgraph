@@ -1,8 +1,8 @@
 /* Installed GSQL queries implementing the catalogue in fraudgraph/graph/queries.py.
  *
  * Each one is a real graph traversal, not a table scan: the investigation walks
- * Card -> MADE -> Transaction -> FROM_DEVICE -> DeviceProfile -> DEVICE_USED_BY
- * -> Transaction -> MADE_BY -> Card, and Transaction -> INVOLVED_IN -> ClosedCase.
+ * PaymentCard -> MADE -> Transaction -> FROM_DEVICE -> DeviceProfile -> DEVICE_USED_BY
+ * -> Transaction -> MADE_BY -> PaymentCard, and Transaction -> INVOLVED_IN -> ClosedCase.
  */
 
 /* ---------------------------------------------------------------- txn_detail */
@@ -25,7 +25,7 @@ CREATE QUERY card_window(STRING card_id, DATETIME center_ts,
   DATETIME lo, hi;
   lo = datetime_add(center_ts, INTERVAL (to_int(hours_before * 3600)) SECOND * -1);
   hi = datetime_add(center_ts, INTERVAL (to_int(hours_after * 3600)) SECOND);
-  Start = {Card.*};
+  Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   T = SELECT t FROM C:c -(MADE:e)- Transaction:t
       WHERE t.ts >= lo AND t.ts <= hi
@@ -52,7 +52,7 @@ CREATE QUERY card_profile(STRING card_id, DATETIME before_ts, INT lookback_days 
   DATETIME lo;
   lo = datetime_add(before_ts, INTERVAL lookback_days DAY * -1);
 
-  Start = {Card.*};
+  Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   T = SELECT t FROM C:c -(MADE:e)- Transaction:t
       WHERE t.ts < before_ts AND t.ts >= lo
@@ -83,7 +83,7 @@ CREATE QUERY card_profile(STRING card_id, DATETIME before_ts, INT lookback_days 
 /* -------------------------------------------------------------- card_timeline */
 CREATE QUERY card_timeline(STRING card_id, DATETIME from_ts, DATETIME to_ts, INT lim = 1000)
   FOR GRAPH FraudInvestigation {
-  Start = {Card.*};
+  Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   T = SELECT t FROM C:c -(MADE:e)- Transaction:t
       WHERE t.ts >= from_ts AND t.ts <= to_ts
@@ -95,7 +95,7 @@ CREATE QUERY card_timeline(STRING card_id, DATETIME from_ts, DATETIME to_ts, INT
 CREATE QUERY customer_cards(STRING customer_id) FOR GRAPH FraudInvestigation {
   Start = {Customer.*};
   U = SELECT u FROM Start:u WHERE u.customer_id == customer_id;
-  K = SELECT k FROM U:u -(OWNS:e)- Card:k;
+  K = SELECT k FROM U:u -(OWNS:e)- PaymentCard:k;
   PRINT K AS cards;
 }
 
@@ -177,7 +177,7 @@ CREATE QUERY region_history_for_card(STRING card_id, STRING region_id, DATETIME 
   MapAccum<STRING, SumAccum<INT>> @@by_region;
   MinAccum<DATETIME> @@first_in_region;
 
-  Start = {Card.*};
+  Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   T = SELECT t FROM C:c -(MADE:e)- Transaction:t WHERE t.ts < before_ts
       ACCUM
@@ -199,7 +199,7 @@ CREATE QUERY device_history_for_card(STRING card_id, STRING device_profile, DATE
   SetAccum<STRING> @@devices;
   MinAccum<DATETIME> @@first_on_device;
 
-  Start = {Card.*};
+  Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   T = SELECT t FROM C:c -(MADE:e)- Transaction:t WHERE t.ts < before_ts
       ACCUM
@@ -214,7 +214,7 @@ CREATE QUERY device_history_for_card(STRING card_id, STRING device_profile, DATE
 
 /* ------------------------------------------------------------- case memory */
 CREATE QUERY closed_cases_for_card(STRING card_id, STRING as_of) FOR GRAPH FraudInvestigation {
-  Start = {Card.*};
+  Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   Direct = SELECT cc FROM C:c -(CASE_ON:e)- ClosedCase:cc;
   Conn = SELECT cc FROM C:c -(CONNECTED_FROM:e)- ClosedCase:cc;
@@ -266,7 +266,7 @@ CREATE QUERY read_cases(STRING case_id, INT lim = 100) FOR GRAPH FraudInvestigat
 CREATE QUERY graph_health() FOR GRAPH FraudInvestigation {
   SumAccum<INT> @@n_txn, @@n_card, @@n_cust, @@n_dev, @@n_closed, @@n_agent;
   T = SELECT t FROM Transaction:t ACCUM @@n_txn += 1;
-  C = SELECT c FROM Card:c ACCUM @@n_card += 1;
+  C = SELECT c FROM PaymentCard:c ACCUM @@n_card += 1;
   U = SELECT u FROM Customer:u ACCUM @@n_cust += 1;
   D = SELECT d FROM DeviceProfile:d ACCUM @@n_dev += 1;
   CC = SELECT cc FROM ClosedCase:cc ACCUM @@n_closed += 1;

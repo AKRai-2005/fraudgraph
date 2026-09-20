@@ -461,9 +461,9 @@ class TigerGraphBackend:
             for t in case.get("affected_txn_ids", []):
                 edges.append(("AgentCase", gid, "CASE_INVESTIGATES", "Transaction", str(t), {}))
             if case.get("card_id"):
-                edges.append(("AgentCase", gid, "CASE_ON_CARD", "Card", case["card_id"], {}))
+                edges.append(("AgentCase", gid, "CASE_ON_CARD", "PaymentCard", case["card_id"], {}))
             for c in case.get("connected_card_ids", []):
-                edges.append(("AgentCase", gid, "CASE_CONNECTED_TO", "Card", str(c), {}))
+                edges.append(("AgentCase", gid, "CASE_CONNECTED_TO", "PaymentCard", str(c), {}))
             for d in case.get("connected_device_profiles", []):
                 edges.append(("AgentCase", gid, "CASE_FROM_DEVICE", "DeviceProfile", str(d), {}))
             for p in case.get("similar_prior_cases", []):

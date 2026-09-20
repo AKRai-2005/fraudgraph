@@ -231,10 +231,10 @@ def _write_case(self, case: dict) -> dict:
                 "source": "agent",
             },
         })
-        edges = [("CASE_ON_CARD", "Card", case.get("card_id", ""))]
+        edges = [("CASE_ON_CARD", "PaymentCard", case.get("card_id", ""))]
         edges += [("CASE_INVESTIGATES", "Transaction", str(t))
                   for t in case.get("affected_txn_ids", [])]
-        edges += [("CASE_CONNECTED_TO", "Card", str(c))
+        edges += [("CASE_CONNECTED_TO", "PaymentCard", str(c))
                   for c in case.get("connected_card_ids", [])]
         edges += [("CASE_FROM_DEVICE", "DeviceProfile", str(d))
                   for d in case.get("connected_device_profiles", [])]

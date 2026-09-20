@@ -1,9 +1,14 @@
 /* Fraud investigation knowledge graph -- schema
  *
  * Derived from the shipped data, not assumed:
- *   - a Card is (customer_id, card4 network, card6 type); see docs/DATA_NOTES.md
+ *   - a PaymentCard is (customer_id, card4 network, card6 type); see docs/DATA_NOTES.md
  *   - a DeviceProfile is DeviceInfo | OS | browser | screen, per the README
  *   - channel is in_person for ProductCD 'W' and online otherwise (verified: 0 violations)
+ *
+ * The card vertex is named PaymentCard, not Card: vertex types are global in
+ * TigerGraph, and a Savanna workspace that has run the shipped Transaction_Fraud
+ * sample already owns a global `Card` type. Renaming ours keeps both schemas in
+ * one database without touching the sample.
  *
  * Two case vertex types are kept deliberately separate:
  *   ClosedCase  -- the 5,565 investigations shipped with the dataset (read-only truth)
@@ -22,7 +27,7 @@ CREATE VERTEX Customer (
   home_country STRING
 ) WITH primary_id_as_attribute="true";
 
-CREATE VERTEX Card (
+CREATE VERTEX PaymentCard (
   PRIMARY_ID card_id STRING,
   customer_id STRING,
   card1 INT,
@@ -154,8 +159,8 @@ CREATE VERTEX PolicyRule (
 
 /* ---------------------------------------------------------------- edges */
 
-CREATE DIRECTED EDGE OWNS (FROM Customer, TO Card) WITH REVERSE_EDGE="OWNED_BY";
-CREATE DIRECTED EDGE MADE (FROM Card, TO Transaction, ts DATETIME, amount DOUBLE)
+CREATE DIRECTED EDGE OWNS (FROM Customer, TO PaymentCard) WITH REVERSE_EDGE="OWNED_BY";
+CREATE DIRECTED EDGE MADE (FROM PaymentCard, TO Transaction, ts DATETIME, amount DOUBLE)
   WITH REVERSE_EDGE="MADE_BY";
 CREATE DIRECTED EDGE FROM_DEVICE (FROM Transaction, TO DeviceProfile, device_new STRING, proxy_flag STRING)
   WITH REVERSE_EDGE="DEVICE_USED_BY";
@@ -169,13 +174,13 @@ CREATE DIRECTED EDGE NEXT_TXN (FROM Transaction, TO Transaction, gap_s DOUBLE)
   WITH REVERSE_EDGE="PREV_TXN";
 
 CREATE DIRECTED EDGE INVOLVES (FROM ClosedCase, TO Transaction) WITH REVERSE_EDGE="INVOLVED_IN";
-CREATE DIRECTED EDGE ON_CARD (FROM ClosedCase, TO Card) WITH REVERSE_EDGE="CASE_ON";
-CREATE DIRECTED EDGE CONNECTED_TO (FROM ClosedCase, TO Card) WITH REVERSE_EDGE="CONNECTED_FROM";
+CREATE DIRECTED EDGE ON_CARD (FROM ClosedCase, TO PaymentCard) WITH REVERSE_EDGE="CASE_ON";
+CREATE DIRECTED EDGE CONNECTED_TO (FROM ClosedCase, TO PaymentCard) WITH REVERSE_EDGE="CONNECTED_FROM";
 
 CREATE DIRECTED EDGE CASE_INVESTIGATES (FROM AgentCase, TO Transaction)
   WITH REVERSE_EDGE="INVESTIGATED_BY";
-CREATE DIRECTED EDGE CASE_ON_CARD (FROM AgentCase, TO Card) WITH REVERSE_EDGE="AGENT_CASE_ON";
-CREATE DIRECTED EDGE CASE_CONNECTED_TO (FROM AgentCase, TO Card)
+CREATE DIRECTED EDGE CASE_ON_CARD (FROM AgentCase, TO PaymentCard) WITH REVERSE_EDGE="AGENT_CASE_ON";
+CREATE DIRECTED EDGE CASE_CONNECTED_TO (FROM AgentCase, TO PaymentCard)
   WITH REVERSE_EDGE="AGENT_CASE_CONNECTED_FROM";
 CREATE DIRECTED EDGE CASE_CONTAINS_EVIDENCE (FROM AgentCase, TO CaseEvidence)
   WITH REVERSE_EDGE="EVIDENCE_OF";

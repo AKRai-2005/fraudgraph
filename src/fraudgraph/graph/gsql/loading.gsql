@@ -1,8 +1,17 @@
-/* Loading jobs. One file per vertex/edge set, produced by
+/* Loading job. One file per vertex/edge set, produced by
  * `python -m fraudgraph.ingest.tg_export` into build/tg_csv/.
  *
+ * Columns are POSITIONAL ($0, $1, ...) rather than named ($"col"). Named
+ * columns require the server to know each file's header at CREATE time --
+ * "The FILENAME variable 'f_region' must be initialized to use the file header
+ * name as the column name" -- which it cannot when the file is posted later by
+ * runLoadingJobWithFile. `header="true"` still skips the header row.
+ *
+ * The positions below are asserted against the exported CSV headers by
+ * tests/test_tg_loading.py, so the two cannot drift apart silently.
+ *
  * Idempotent: TigerGraph upserts by primary id, so re-running a job updates
- * rather than duplicates.  That is what makes ingestion repeatable.
+ * rather than duplicates. That is what makes ingestion repeatable.
  */
 
 CREATE LOADING JOB load_fraud_graph FOR GRAPH FraudInvestigation {
@@ -19,65 +28,68 @@ CREATE LOADING JOB load_fraud_graph FOR GRAPH FraudInvestigation {
   DEFINE FILENAME f_edge_case_txn;
   DEFINE FILENAME f_edge_case_conn;
 
-  LOAD f_customer TO VERTEX Customer VALUES(
-    $"customer_id", $"n_cards", $"n_txns", $"first_ts", $"last_ts",
-    $"total_amt", $"home_region", $"home_country"
-  ) USING header="true", separator=",";
-
-  LOAD f_card TO VERTEX Card VALUES(
-    $"card_id", $"customer_id", $"card1", $"network", $"card_type", $"n_txns",
-    $"first_ts", $"last_ts", $"total_amt", $"median_amt", $"max_amt",
-    $"n_online", $"n_in_person", $"mean_risk"
-  ), TO EDGE OWNS VALUES($"customer_id", $"card_id")
+  /* customer_id,n_cards,n_txns,first_ts,last_ts,total_amt,home_region,home_country */
+  LOAD f_customer TO VERTEX Customer VALUES($0, $1, $2, $3, $4, $5, $6, $7)
   USING header="true", separator=",";
 
-  LOAD f_txn TO VERTEX Transaction VALUES(
-    $"txn_id", $"card_id", $"customer_id", $"ts", $"amount", $"product_cd",
-    $"channel", $"risk_score", $"addr1", $"addr2", $"dist1", $"p_email",
-    $"r_email", $"device_profile", $"device_new", $"proxy_flag",
-    $"match_status", $"seq_in_card"
-  ),
-  TO EDGE MADE VALUES($"card_id", $"txn_id", $"ts", $"amount"),
-  TO EDGE FROM_DEVICE VALUES($"txn_id", $"device_profile", $"device_new", $"proxy_flag")
-      WHERE $"device_profile" != "",
-  TO EDGE BILLED_IN VALUES($"txn_id", $"addr1") WHERE $"addr1" != "",
-  TO EDGE PURCHASER_EMAIL VALUES($"txn_id", $"p_email") WHERE $"p_email" != "",
-  TO EDGE RECIPIENT_EMAIL VALUES($"txn_id", $"r_email") WHERE $"r_email" != ""
+  /* card_id,customer_id,card1,network,card_type,n_txns,first_ts,last_ts,
+     total_amt,median_amt,max_amt,n_online,n_in_person,mean_risk */
+  LOAD f_card
+    TO VERTEX PaymentCard VALUES($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13),
+    TO EDGE OWNS VALUES($1, $0)
   USING header="true", separator=",";
 
-  LOAD f_device TO VERTEX DeviceProfile VALUES(
-    $"device_profile", $"device_type", $"device_info", $"os", $"browser",
-    $"screen", $"proxy_flags", $"n_txns", $"n_cards", $"n_customers",
-    $"n_new_for_account", $"first_ts", $"last_ts", $"total_amt"
-  ) USING header="true", separator=",";
-
-  LOAD f_region TO VERTEX BillingRegion VALUES(
-    $"region_id", $"country", $"n_txns", $"n_cards", $"n_customers"
-  ) USING header="true", separator=",";
-
-  LOAD f_email TO VERTEX EmailDomain VALUES($"domain", $"n_txns")
+  /* txn_id,card_id,customer_id,ts,amount,product_cd,channel,risk_score,addr1,
+     addr2,dist1,p_email,r_email,device_profile,device_new,proxy_flag,
+     match_status,seq_in_card */
+  LOAD f_txn
+    TO VERTEX Transaction VALUES($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                                 $13, $14, $15, $16, $17),
+    TO EDGE MADE VALUES($1, $0, $3, $4),
+    TO EDGE FROM_DEVICE VALUES($0, $13, $14, $15) WHERE $13 != "",
+    TO EDGE BILLED_IN VALUES($0, $8) WHERE $8 != "",
+    TO EDGE PURCHASER_EMAIL VALUES($0, $11) WHERE $11 != "",
+    TO EDGE RECIPIENT_EMAIL VALUES($0, $12) WHERE $12 != ""
   USING header="true", separator=",";
 
-  LOAD f_closed_case TO VERTEX ClosedCase VALUES(
-    $"case_id", $"customer_id", $"card_id", $"opened_at", $"closed_at",
-    $"outcome", $"pattern", $"first_fraud_txn_id", $"n_txns", $"exposure_usd",
-    $"actions_taken", $"report_filed", $"analyst_notes"
-  ), TO EDGE ON_CARD VALUES($"case_id", $"card_id")
+  /* device_profile,device_type,device_info,os,browser,screen,proxy_flags,
+     n_txns,n_cards,n_customers,n_new_for_account,first_ts,last_ts,total_amt */
+  LOAD f_device TO VERTEX DeviceProfile
+    VALUES($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+  USING header="true", separator=",";
+
+  /* region_id,country,n_txns,n_cards,n_customers */
+  LOAD f_region TO VERTEX BillingRegion VALUES($0, $1, $2, $3, $4)
+  USING header="true", separator=",";
+
+  /* domain,n_txns */
+  LOAD f_email TO VERTEX EmailDomain VALUES($0, $1)
+  USING header="true", separator=",";
+
+  /* case_id,customer_id,card_id,opened_at,closed_at,outcome,pattern,
+     first_fraud_txn_id,n_txns,exposure_usd,actions_taken,report_filed,analyst_notes */
+  LOAD f_closed_case
+    TO VERTEX ClosedCase VALUES($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12),
+    TO EDGE ON_CARD VALUES($0, $2) WHERE $2 != ""
   USING header="true", separator=",", quote="double";
 
-  LOAD f_pattern TO VERTEX FraudPattern VALUES(
-    $"pattern_id", $"name", $"description", $"documented", $"policy_rules"
-  ) USING header="true", separator=",", quote="double";
-
-  LOAD f_policy TO VERTEX PolicyRule VALUES($"rule_id", $"summary", $"rule_text")
+  /* pattern_id,name,description,documented,policy_rules */
+  LOAD f_pattern TO VERTEX FraudPattern VALUES($0, $1, $2, $3, $4)
   USING header="true", separator=",", quote="double";
 
-  LOAD f_edge_next TO EDGE NEXT_TXN VALUES($"from_txn", $"to_txn", $"gap_s")
+  /* rule_id,summary,rule_text */
+  LOAD f_policy TO VERTEX PolicyRule VALUES($0, $1, $2)
+  USING header="true", separator=",", quote="double";
+
+  /* from_txn,to_txn,gap_s */
+  LOAD f_edge_next TO EDGE NEXT_TXN VALUES($0, $1, $2)
   USING header="true", separator=",";
 
-  LOAD f_edge_case_txn TO EDGE INVOLVES VALUES($"case_id", $"txn_id")
+  /* case_id,txn_id */
+  LOAD f_edge_case_txn TO EDGE INVOLVES VALUES($0, $1)
   USING header="true", separator=",";
 
-  LOAD f_edge_case_conn TO EDGE CONNECTED_TO VALUES($"case_id", $"card_id")
+  /* case_id,card_id */
+  LOAD f_edge_case_conn TO EDGE CONNECTED_TO VALUES($0, $1)
   USING header="true", separator=",";
 }

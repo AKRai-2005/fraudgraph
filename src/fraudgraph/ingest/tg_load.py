@@ -22,6 +22,104 @@ from ..config import PATHS, TG
 
 GSQL_DIR = Path(__file__).resolve().parents[1] / "graph" / "gsql"
 
+
+def gsql_statements(text: str) -> list[str]:
+    """Split a .gsql file into individually-executable statements.
+
+    The GSQL endpoint a Savanna workspace exposes rejects a trailing semicolon
+    ("Encountered ';'"), and will not take a multi-statement blob, so each
+    statement is sent on its own with its terminator stripped.
+
+    Splitting cannot be a plain ``text.split(';')``: a CREATE QUERY body and a
+    CREATE LOADING JOB body are full of semicolons. So brace depth is tracked,
+    and a statement ends either at a semicolon while at depth 0, or at the brace
+    that closes a block. Comments and string literals are skipped so a ``;``
+    inside either is never mistaken for a terminator.
+    """
+    out: list[str] = []
+    buf: list[str] = []
+    depth = 0
+    i, n = 0, len(text)
+    in_str: str | None = None
+    while i < n:
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if in_str:
+            buf.append(ch)
+            if ch == in_str and text[i - 1] != "\\":
+                in_str = None
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            in_str = ch
+            buf.append(ch)
+            i += 1
+            continue
+        if ch == "/" and nxt == "*":
+            j = text.find("*/", i + 2)
+            i = n if j == -1 else j + 2
+            continue
+        if (ch == "/" and nxt == "/") or ch == "#":
+            j = text.find("\n", i)
+            i = n if j == -1 else j
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            buf.append(ch)
+            i += 1
+            if depth == 0:
+                stmt = "".join(buf).strip()
+                if stmt:
+                    out.append(stmt)
+                buf = []
+            continue
+        if ch == ";" and depth == 0:
+            stmt = "".join(buf).strip()
+            if stmt:
+                out.append(stmt)
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    tail = "".join(buf).strip()
+    if tail:
+        out.append(tail)
+    return out
+
+
+#: GSQL responses that mean "already there", which makes a re-run a no-op
+#: rather than a failure.
+_BENIGN = ("already exists", "already in the graph", "is already")
+
+
+def _run_statements(conn, prefix: str, statements: list[str], label: str) -> dict:
+    ok = skipped = failed = 0
+    errors: list[str] = []
+    for idx, stmt in enumerate(statements, 1):
+        head = " ".join(stmt.split())[:72]
+        try:
+            out = conn.gsql(prefix + "\n" + stmt) or ""
+        except Exception as exc:  # noqa: BLE001
+            out = f"EXCEPTION {type(exc).__name__}: {exc}"
+        low = out.lower()
+        if any(b in low for b in _BENIGN):
+            skipped += 1
+            print(f"  [{idx:2d}/{len(statements)}] skip   {head}")
+        elif "fail" in low or "error" in low or "exception" in low or "not match" in low:
+            failed += 1
+            errors.append(f"{head} -> {' '.join(out.split())[:240]}")
+            print(f"  [{idx:2d}/{len(statements)}] FAIL   {head}")
+        else:
+            ok += 1
+            print(f"  [{idx:2d}/{len(statements)}] ok     {head}", flush=True)
+    print(f"{label}: {ok} created, {skipped} already present, {failed} failed")
+    for e in errors:
+        print(f"    ! {e}")
+    return {"ok": ok, "skipped": skipped, "failed": failed, "errors": errors}
+
 #: loading-job file tag -> exported CSV
 FILE_TAGS = {
     "f_customer": "customers.csv",
@@ -78,6 +176,24 @@ def _conn(graph: str | None = None):
     return conn
 
 
+#: Exactly the types this project owns. ``CREATE GRAPH g(*)`` would pull in
+#: every global type in the database -- including the 29 belonging to the
+#: Transaction_Fraud sample a Savanna workspace ships with -- so the graph is
+#: created over a named list instead.
+VERTEX_TYPES = [
+    "Customer", "PaymentCard", "Transaction", "DeviceProfile", "BillingRegion",
+    "EmailDomain", "ClosedCase", "AgentCase", "CaseEvidence", "FraudPattern",
+    "PolicyRule",
+]
+EDGE_TYPES = [
+    "OWNS", "MADE", "FROM_DEVICE", "BILLED_IN", "PURCHASER_EMAIL",
+    "RECIPIENT_EMAIL", "NEXT_TXN", "INVOLVES", "ON_CARD", "CONNECTED_TO",
+    "CASE_INVESTIGATES", "CASE_ON_CARD", "CASE_CONNECTED_TO",
+    "CASE_CONTAINS_EVIDENCE", "CASE_MATCHES_PATTERN", "CASE_FROM_DEVICE",
+    "CASE_CITES_PRIOR", "CASE_APPLIES_RULE",
+]
+
+
 def create_schema(drop: bool = False) -> None:
     _require_config()
     conn = _conn()
@@ -86,22 +202,24 @@ def create_schema(drop: bool = False) -> None:
     if drop:
         print("  dropping existing graph (requested)")
         print(conn.gsql(f"DROP GRAPH {TG.graph}"))
-    # global vertex/edge types, then the graph over all of them
-    out = conn.gsql("USE GLOBAL\n" + schema)
-    print(out[-2000:] if out else "(no output)")
-    out = conn.gsql(f"CREATE GRAPH {TG.graph}(*)")
-    print(out[-800:] if out else "(no output)")
+    stmts = gsql_statements(schema)
+    print(f"  {len(stmts)} schema statements")
+    _run_statements(conn, "USE GLOBAL", stmts, "schema")
+    members = ", ".join(VERTEX_TYPES + EDGE_TYPES)
+    out = conn.gsql(f"CREATE GRAPH {TG.graph}({members})") or ""
+    print("  " + (" ".join(out.split())[:900] or "(no output)"))
 
 
 def install_queries() -> None:
     _require_config()
     conn = _conn(TG.graph)
     queries = (GSQL_DIR / "queries.gsql").read_text(encoding="utf-8")
-    print("Installing GSQL queries (this takes a few minutes) ...")
-    out = conn.gsql(f"USE GRAPH {TG.graph}\n" + queries)
-    print(out[-3000:] if out else "(no output)")
-    out = conn.gsql(f"USE GRAPH {TG.graph}\nINSTALL QUERY ALL")
-    print(out[-2000:] if out else "(no output)")
+    stmts = gsql_statements(queries)
+    print(f"Creating {len(stmts)} GSQL queries ...")
+    _run_statements(conn, f"USE GRAPH {TG.graph}", stmts, "queries")
+    print("Installing (this takes a few minutes) ...", flush=True)
+    out = conn.gsql(f"USE GRAPH {TG.graph}\nINSTALL QUERY ALL") or ""
+    print("  " + (" ".join(out.split())[-1500:] or "(no output)"))
 
 
 def create_loading_job() -> None:
@@ -109,9 +227,9 @@ def create_loading_job() -> None:
     conn = _conn(TG.graph)
     job = (GSQL_DIR / "loading.gsql").read_text(encoding="utf-8")
     job = job.replace("FraudInvestigation", TG.graph)
-    print("Creating loading job ...")
-    out = conn.gsql(f"USE GRAPH {TG.graph}\n" + job)
-    print(out[-2000:] if out else "(no output)")
+    stmts = gsql_statements(job)
+    print(f"Creating loading job ({len(stmts)} statement(s)) ...")
+    _run_statements(conn, f"USE GRAPH {TG.graph}", stmts, "loading job")
 
 
 def load_data(only: list[str] | None = None) -> dict:
