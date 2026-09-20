@@ -99,6 +99,10 @@ class InvestigationAgent:
     # ------------------------------------------------------------------ run
     def investigate(self, trigger: Trigger) -> AnswerFile:
         t0 = time.perf_counter()
+        # tokens_used on the narrator is cumulative across the whole run, so the
+        # per-case figure is the delta. Summing the cumulative value over 20
+        # cases produced a triangular number roughly ten times the truth.
+        tokens_at_start = getattr(self.narrator, "tokens_used", 0) if self.narrator else 0
         self.store.reset()
         inv_id = f"INV-{datetime.now(timezone.utc):%Y%m%d}-{uuid.uuid4().hex[:8]}"
         ctx = F.CaseContext(case_id=trigger.case_id, trigger=trigger.__dict__)
@@ -218,7 +222,7 @@ class InvestigationAgent:
         # ---- assemble ----
         answer = self._assemble(
             st, feats, final_risk, initial, final, requests, similar, shared,
-            episode, what_changed, risk, t0,
+            episode, what_changed, risk, t0, tokens_at_start,
         )
         return answer
 
@@ -309,6 +313,22 @@ class InvestigationAgent:
             return
         ctx = st.ctx
         t = ctx.txn
+        # Ask the model only when the deterministic plan has not turned up a
+        # lead. If the baseline already found a device ring, a burst, or a prior
+        # case on this card, there is plenty to reason over and a further query
+        # would be confirmation rather than discovery. This also keeps a
+        # free-tier daily request allowance for the narratives, which matter
+        # more: the planner added no query on any of the 20 exam cases.
+        ring = int((ctx.device_ring or {}).get("n_cards") or 0)
+        window = len((ctx.window or {}).get("transactions") or [])
+        priors = (len((ctx.prior_cases_card or {}).get("direct") or [])
+                  + int((ctx.prior_cases_device or {}).get("n") or 0))
+        if ring >= P.RING_MIN_CARDS or window >= 3 or priors:
+            st.log("tool",
+                   "agent planner not consulted: the baseline already produced a lead "
+                   f"(device ring {ring} cards, {window} transactions in the window, "
+                   f"{priors} prior case(s) on this card or device)")
+            return
         summary = "\n".join([
             f"Flagged transaction {t.get('TransactionID')} on card {ctx.card_id} "
             f"(customer {ctx.customer_id}): ${float(t.get('TransactionAmt') or 0):,.2f} "
@@ -617,7 +637,7 @@ class InvestigationAgent:
 
     def _assemble(
         self, st, feats, risk, initial, final, requests, similar, shared, episode,
-        what_changed, risk0, t0,
+        what_changed, risk0, t0, tokens_at_start: int = 0,
     ) -> AnswerFile:
         pattern = self._pattern(st, risk, feats)
         pf = self._pattern_finding(st, risk)
@@ -684,7 +704,7 @@ class InvestigationAgent:
             sar.activity_dates = [episode.first_ts, episode.last_ts] if episode.first_ts else []
             sar.narrative = write_sar_narrative(answer, feats, risk, shared, self.narrator)
         if self.narrator is not None:
-            answer.tokens = getattr(self.narrator, "tokens_used", 0)
+            answer.tokens = max(0, getattr(self.narrator, "tokens_used", 0) - tokens_at_start)
 
         # Persist to case memory. written_to_graph is set from what the graph
         # actually accepted -- never assumed.

@@ -97,7 +97,7 @@
       "CC-4086",
       "CC-3841"
     ],
-    "summary": "Customer report on card C07297-K1: $482.12 online on 2016-11-21, scored 0.25 by the bank's model. 4 online purchases within 30 minutes, each between $440 and $500 (total $1,906.07); amounts sit just under the $500 authorisation threshold. Online accounts for only 2.5% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2649, CC-2985, CC-3035), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.97 on 3 independent signals, with exposure $1,906.07 across 4 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto), FILE_REPORT (L2).",
+    "summary": "Transaction 3476682 on card C07297-K1 for $482.12 online on 2016-11-21 20:30:00 scored 0.25 by the bank's model and is assessed as fraud with a probability of 0.97 and an exposure of $1,906.07. The activity exhibits sub-threshold structuring through 4 online purchases within 30 minutes, each between $440 and $500 just under the $500 authorisation threshold, alongside a low historical online frequency of 2.5% to 3%. Case memory matches include closed cases CC-2649, CC-2985, CC-3035, and CC-2971 with confirmed fraud and undocumented patterns. Recommended actions are BLOCK_CARD (L1), CREATE_CASE (auto), and FILE_REPORT (L2).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-006"
   },
@@ -156,6 +156,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
-  "tokens": 12958,
-  "latency_s": 12.75
+  "tokens": 2400,
+  "latency_s": 3.12
 }

@@ -48,39 +48,39 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-1056 (confirmed_fraud, pattern card_not_present_new_device, exposure $1,557.95) matches this alert on a prior investigation on this exact card.",
+        "claim": "Case memory: closed case CC-3905 (confirmed_fraud, pattern card_not_present_new_device, exposure $1,397.53) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
         "entity_ids": [
-          "CC-1056"
+          "CC-3905"
         ]
       },
       {
-        "claim": "Case memory: closed case CC-2247 (confirmed_fraud, pattern card_testing, exposure $4,886.18) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=card_testing, channel=online)",
-        "entity_ids": [
-          "CC-2247"
-        ]
-      },
-      {
-        "claim": "Case memory: closed case CC-3206 (confirmed_fraud, pattern card_not_present_new_device, exposure $100.24) matches this alert on a prior investigation on this exact card.",
+        "claim": "Case memory: closed case CC-3039 (confirmed_fraud, pattern card_not_present_new_device, exposure $108.85) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
         "entity_ids": [
-          "CC-3206"
+          "CC-3039"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0031 (confirmed_fraud, pattern card_not_present_new_device, exposure $20.36) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=card_not_present_new_device, channel=online)",
+        "entity_ids": [
+          "CC-0031"
         ]
       }
     ],
     "similar_prior_cases": [
       "CC-4501",
-      "CC-1056",
-      "CC-2247",
-      "CC-3206",
       "CC-3905",
-      "CC-3039"
+      "CC-3039",
+      "CC-0031",
+      "CC-2799",
+      "CC-2673"
     ],
-    "summary": "Customer report on card C11923-K2: $131.30 online on 2016-12-29, scored 0.39 by the bank's model. Online purchase from a device profile never seen on this card (25 devices previously seen), marked new for the account. Case memory returned 6 comparable closed investigation(s) (CC-4501, CC-1056, CC-2247), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 3 independent signals, with exposure $131.30 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Transaction 3583368 on card C11923-K2 for $131.30, occurring online on 2016-12-29 03:27:44 under product code C, was scored 0.39 by the bank's model and matches the card_not_present_new_device pattern with a device profile never seen on this card among 25 previously seen devices. Case memory shows four closed confirmed fraud cases on this exact card (CC-4501, CC-3905, CC-3039, and CC-0031). The transaction is assessed as fraud with a probability of 0.80 and an exposure of $131.30. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-011"
   },
@@ -122,6 +122,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
-  "tokens": 14939,
-  "latency_s": 4.22
+  "tokens": 977,
+  "latency_s": 3.7
 }

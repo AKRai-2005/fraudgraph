@@ -136,7 +136,7 @@ Gemini's free tier is enough:
 
 ```
 FG_LLM_PROVIDER=gemini
-FG_LLM_MODEL=gemini-flash-latest
+FG_LLM_MODEL=gemini-flash-lite-latest
 GEMINI_API_KEY=<key from https://aistudio.google.com/apikey>
 ```
 

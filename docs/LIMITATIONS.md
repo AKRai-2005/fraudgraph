@@ -72,6 +72,31 @@ above are against the *closed cases*, which is a different and easier problem.
    "V127 was elevated" is not evidence an analyst can act on. This leaves
    signal on the table.
 
+## The LLM's free tier is the binding constraint
+
+Gemini's free tier allows **20 `generateContent` requests per day per model**
+(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). A 20-case run needs one
+narrative call per case plus one per SAR, so it sits right at that ceiling.
+
+Three things follow, all visible rather than hidden:
+
+* The default model is `gemini-flash-lite-latest`. `gemini-2.0-flash` and
+  `gemini-2.5-flash` are both refused to new API keys ("no longer available to
+  new users").
+* The LLM planner is consulted only when the deterministic baseline turned up
+  no lead — no device ring, fewer than three transactions in the window, no
+  prior case on the card or device. On the 20 exam cases the baseline always
+  had a lead, so the planner spent no requests and added no queries. That is
+  reported, not assumed.
+* When a call is refused the narrator falls back to the deterministic template
+  and the run **says so**: `benchmark_summary.json` carries
+  `llm_stats.calls_rate_limited`, and the runner prints a warning. An earlier
+  run silently produced template narratives for most cases while looking
+  successful; that is what the counter exists to prevent.
+
+The verdicts, probabilities, patterns, actions, routes and SAR decisions never
+come from the LLM, so a quota exhaustion changes only the prose.
+
 ## Engineering limitations
 
 * The local mirror holds the transaction index in memory (~590k rows). It is a

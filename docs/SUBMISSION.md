@@ -13,7 +13,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Ingestion repeatable without duplicating the graph | done | parquet cache is rebuilt from source; TigerGraph loads upsert by primary id |
 | Graph schema designed from the actual data | done | `src/fraudgraph/graph/gsql/schema.gsql` |
 | GSQL queries implemented | done | `src/fraudgraph/graph/gsql/queries.gsql` (17 queries) |
-| TigerGraph connected and loaded | **pending credentials** | `python -m fraudgraph.ingest.tg_load --all` once `.env` is filled |
+| TigerGraph connected and loaded | done | Savanna workspace, TigerGraph 4.2.5: 590,742 Transaction, 14,318 PaymentCard, 13,553 Customer, 9,706 DeviceProfile, 5,565 ClosedCase — every count matches the source |
 | Graph traversal contributes actual evidence | done | `tests/test_integration.py::test_device_neighbors_traverses_to_other_cards` |
 
 ## Agent
@@ -28,8 +28,8 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Recommendations change when evidence changes | done | `tests/test_scenarios.py::test_scenario_recommendation_changes_when_the_customer_denies` and `..._reverses_when_the_customer_confirms` |
 | Stopping conditions work | done | `tests/test_scenarios.py::test_scenario_stopping_rules` |
 | Decisions explained and recorded | done | timeline + tool ledger persisted per case in `build/case_records/` |
-| LLM integrated for reasoning and narrative | **pending credentials** | runs on templates without a key; `FG_LLM_PROVIDER=gemini` + `GEMINI_API_KEY` turns it on |
-| TigerGraph MCP integration | **not done** | see note below |
+| LLM integrated for reasoning and narrative | done | Gemini `gemini-flash-lite-latest`; 22 calls, 24,912 tokens across the 20 cases, 0 rate-limited |
+| TigerGraph MCP integration | code complete, not yet exercised | `FG_GRAPH_BACKEND=mcp` routes the whole catalogue through `tigergraph__run_installed_query`; see the note below |
 
 ## Policy and cases
 
@@ -39,7 +39,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Unauthorised actions prevented | done | `tests/test_policy.py::test_mock_service_refuses_unapproved_human_action` |
 | Approval requirements enforced | done | 27 policy tests; routing table asserted against the README |
 | Cases created and progressed | done | initial → evidence request → final, per case |
-| Case memory persists | partial | local JSONL journal always; TigerGraph pending credentials |
+| Case memory persists | done | 20 AgentCase vertices, 148 CaseEvidence, 105 CASE_CITES_PRIOR edges in TigerGraph |
 | Historical cases inform new investigations | done | `similar_prior_cases` with `why_retrieved` |
 | Audit records maintained | done | `build/case_records/*.json`, `build/action_audit_log.jsonl` |
 
@@ -77,7 +77,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | GitHub repository | **to do** — `git init` done, needs a remote |
 | 20 answer files in `cases/` | done |
 | Complete case records | done (`build/case_records/`) |
-| Cases written to TigerGraph | **pending credentials** |
+| Cases written to TigerGraph | done — 20/20, `written_to_graph: true` in every answer file |
 | SARs where policy requires | done |
 | Next-best action before and after evidence | done |
 | 3–5 minute demo video | **to do** — script in `docs/DEMO.md` |
@@ -86,10 +86,14 @@ and its output inspected. Regenerate the evidence with the commands shown.
 
 ## Note on TigerGraph MCP
 
-The challenge asks for TigerGraph MCP so the agent can call the graph as tools.
-This implementation exposes the graph to the agent through a named query
-catalogue with validated parameters and a call ledger — the same shape MCP
-provides — but it does **not** currently speak the MCP protocol. Wiring
-`tigergraph-mcp` in front of the existing `GraphStore` is a contained change
-(the catalogue is already the tool surface), and it is listed here as
-outstanding rather than quietly claimed.
+`FG_GRAPH_BACKEND=mcp` runs the whole query catalogue through the official
+`tigergraph-mcp` server over stdio, calling `tigergraph__run_installed_query`
+for every query and `tigergraph__add_node` / `tigergraph__add_edge` to write a
+case. The tool names were taken from the server's own documentation, and
+`available_tools()` reports what the running server actually offers so a
+mismatch surfaces as a recorded failure rather than a silent one.
+
+It is written and imports cleanly, but the 20-case run reported here was made
+through the direct TigerGraph backend, so the MCP path has not been exercised
+end to end against the live workspace. That is stated rather than glossed:
+"code complete, not yet exercised" is the honest status.

@@ -100,7 +100,7 @@ class TigerGraphSettings:
 @dataclass(frozen=True)
 class LLMSettings:
     provider: str = os.getenv("FG_LLM_PROVIDER", "gemini")  # gemini | anthropic | none
-    model: str = os.getenv("FG_LLM_MODEL", "gemini-flash-latest")
+    model: str = os.getenv("FG_LLM_MODEL", "gemini-flash-lite-latest")
     api_key: str = field(
         default_factory=lambda: os.getenv("GEMINI_API_KEY")
         or os.getenv("GOOGLE_API_KEY")

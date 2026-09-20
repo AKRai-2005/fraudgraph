@@ -88,7 +88,7 @@
       "CC-1034",
       "CC-5354"
     ],
-    "summary": "Risk score on card C10434-K1: $1,000.03 online on 2016-12-02, scored 0.90 by the bank's model. Online purchase from a device profile never seen on this card (11 devices previously seen), marked new for the account. $1,000.03 exceeds the card's historical maximum of $670.04. Case memory returned 6 comparable closed investigation(s) (CC-0873, CC-3549, CC-4603), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.43 with confidence 0.56; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
+    "summary": "Transaction 3506725 on card C10434-K1 for $1,000.03 occurred online on 2016-12-02 15:18:27 and was scored 0.90 by the bank's model, exceeding the card's historical maximum of $670.04 using a new device profile. Closed cases CC-0873, CC-3549, CC-4603, and CC-3954 share matching device profiles or prior investigations on the card. The verdict is uncertain at probability 0.43 with pattern none and exposure $0.00. The recommended action is CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-010"
   },
@@ -120,6 +120,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
-  "tokens": 14939,
-  "latency_s": 4.31
+  "tokens": 1051,
+  "latency_s": 3.51
 }

@@ -49,7 +49,7 @@
       }
     ],
     "similar_prior_cases": [],
-    "summary": "Customer report on card C08299-K1: $30.02 online on 2016-12-28, scored 0.28 by the bank's model. $30.02 is at or below the card's 95th-percentile amount ($274.92); online is 87% of this card's history; product code s is 85% of this card's history; device profile already seen 5 times on this card. Assessed as fraud at probability 0.73 on 1 independent signals, with exposure $30.02 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Transaction 3581141 on card C08299-K1 for $30.02, occurring online under product code S on 2016-12-28 12:10:53, was scored 0.28 by the bank's model and assessed as card_not_present_fraud at probability 0.73 with an exposure of $30.02. Although the amount is at or below the card's 95th-percentile amount ($274.92) and matches historical patterns (online accounts for 87% of the card's history, product code S for 85%, and the device profile has been seen 5 times), the case rests on a single signal where the cardholder states they did not make this transaction. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-009"
   },
@@ -91,6 +91,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 10,
-  "tokens": 14939,
-  "latency_s": 6.1
+  "tokens": 876,
+  "latency_s": 2.65
 }

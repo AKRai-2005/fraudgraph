@@ -40,6 +40,14 @@
         ]
       },
       {
+        "claim": "Case memory: closed case CC-2935 (confirmed_fraud, pattern out_of_region_use, exposure $238.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=in_person)",
+        "entity_ids": [
+          "CC-2935"
+        ]
+      },
+      {
         "claim": "Case memory: closed case CC-2817 (confirmed_fraud, pattern out_of_region_use, exposure $38.96) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=in_person)",
@@ -56,14 +64,6 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-2935 (confirmed_fraud, pattern out_of_region_use, exposure $238.00) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=in_person)",
-        "entity_ids": [
-          "CC-2935"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-3682 (confirmed_fraud, pattern out_of_region_use, exposure $300.51) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=out_of_region_use, channel=in_person)",
@@ -73,14 +73,14 @@
       }
     ],
     "similar_prior_cases": [
+      "CC-2935",
       "CC-2817",
       "CC-4957",
-      "CC-2935",
       "CC-3682",
-      "CC-3327",
-      "CC-1589"
+      "CC-1589",
+      "CC-3327"
     ],
-    "summary": "Customer report on card C08623-K2: $49.00 in-person on 2016-12-10, scored 0.40 by the bank's model. $49.00 is at or below the card's 95th-percentile amount ($424.99); in_person is 95% of this card's history; 42 prior transactions in billing region 330; product code w is 95% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2817, CC-4957, CC-2935), used as context rather than as a finding about this transaction. Assessed as fraud at probability 0.80 on 2 independent signals, with exposure $49.00 across 1 transaction(s). Recommended: BLOCK_CARD (L1), CREATE_CASE (auto).",
+    "summary": "Transaction 3530164 on card C08623-K2 for $49.00, occurring on 2016-12-10 13:01:21 as an in-person transaction under product code W, scored 0.40 by the bank's model. This amount is at or below the card's 95th-percentile amount of $424.99, while in-person transactions and product code W each account for 95% of the card's history, alongside 42 prior transactions in billing region 330. Case memory includes closed cases CC-2935, CC-2817, CC-4957, and CC-3682 as confirmed fraud matching this alert. The verdict is fraud with a probability of 0.80 under the account_takeover pattern, representing an exposure of $49.00. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-003"
   },
@@ -122,6 +122,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 5313,
-  "latency_s": 7.52
+  "tokens": 1105,
+  "latency_s": 3.03
 }
