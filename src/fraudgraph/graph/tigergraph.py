@@ -156,7 +156,9 @@ class TigerGraphBackend:
                     hours_after: float = 48.0, limit: int = 500) -> dict:
         res = self._run("card_window", {
             "card_id": card_id, "center_ts": str(center_ts)[:19],
-            "hours_before": float(hours_before), "hours_after": float(hours_after),
+            # the installed query takes whole seconds -- see queries.gsql
+            "sec_before": int(float(hours_before) * 3600),
+            "sec_after": int(float(hours_after) * 3600),
             "lim": int(limit),
         })
         rows = _first(res, "transactions", []) or []
@@ -468,9 +470,10 @@ class TigerGraphBackend:
                 edges.append(("AgentCase", gid, "CASE_FROM_DEVICE", "DeviceProfile", str(d), {}))
             for p in case.get("similar_prior_cases", []):
                 edges.append(("AgentCase", gid, "CASE_CITES_PRIOR", "ClosedCase", str(p), {}))
-            if case.get("pattern") and case["pattern"] != "none":
+            typology = case.get("pattern_detector") or case.get("pattern")
+            if typology and typology != "none":
                 edges.append(("AgentCase", gid, "CASE_MATCHES_PATTERN", "FraudPattern",
-                              case["pattern"], {}))
+                              typology, {}))
             n_ev = 0
             for i, ev in enumerate(case.get("evidence", [])):
                 eid = f"{gid}-E{i:02d}"

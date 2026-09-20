@@ -100,7 +100,7 @@ class TigerGraphSettings:
 @dataclass(frozen=True)
 class LLMSettings:
     provider: str = os.getenv("FG_LLM_PROVIDER", "gemini")  # gemini | anthropic | none
-    model: str = os.getenv("FG_LLM_MODEL", "gemini-2.0-flash")
+    model: str = os.getenv("FG_LLM_MODEL", "gemini-flash-latest")
     api_key: str = field(
         default_factory=lambda: os.getenv("GEMINI_API_KEY")
         or os.getenv("GOOGLE_API_KEY")
@@ -110,6 +110,9 @@ class LLMSettings:
     max_output_tokens: int = int(os.getenv("FG_LLM_MAX_TOKENS", "2048"))
     temperature: float = float(os.getenv("FG_LLM_TEMPERATURE", "0.2"))
     timeout_s: float = float(os.getenv("FG_LLM_TIMEOUT", "60"))
+    # free tiers are rate limited per minute; space calls out rather than
+    # burning the allowance in the first few cases and degrading silently
+    min_interval_s: float = float(os.getenv("FG_LLM_MIN_INTERVAL", "4.5"))
 
     @property
     def configured(self) -> bool:

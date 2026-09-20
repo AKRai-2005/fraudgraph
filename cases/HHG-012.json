@@ -22,7 +22,7 @@
         ]
       },
       {
-        "claim": "The card's established behaviour before this alert: 910 transactions, median $49.08, 95th percentile $226.05, maximum $2,681.01; in_person accounts for 93% of them.",
+        "claim": "The card's established behaviour before this alert: 910 transactions, median $49.07, 95th percentile $226.05, maximum $2,681.01; in_person accounts for 93% of them.",
         "source": "graph",
         "ref": "query:card_profile(card_id=C05876-K2, before_ts=2016-12-18 04:00:31)",
         "entity_ids": [
@@ -38,19 +38,19 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-0003 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=none, channel=in_person)",
-        "entity_ids": [
-          "CC-0003"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-2370 (confirmed_fraud, pattern card_not_present_fraud, exposure $149.99) matches this alert on a prior investigation on this exact card.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=card_not_present_fraud, channel=in_person)",
         "entity_ids": [
           "CC-2370"
+        ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0003 (cleared, pattern none, exposure $0.00) matches this alert on a prior investigation on this exact card.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=in_person)",
+        "entity_ids": [
+          "CC-0003"
         ]
       },
       {
@@ -63,17 +63,17 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-0003",
-      "CC-2370"
+      "CC-2370",
+      "CC-0003"
     ],
-    "summary": "Risk score on card C05876-K2: $30.91 in-person on 2016-12-18, scored 0.55 by the bank's model. $30.91 is at or below the card's 95th-percentile amount ($226.05); in_person is 93% of this card's history; 21 prior transactions in billing region 494; product code w is 93% of this card's history. Case memory returned 2 comparable closed investigation(s) (CC-0003, CC-2370), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.02; the bank model's score of 0.55 is not corroborated by the graph. Recommended: CREATE_CASE (auto), ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
-    "written_to_graph": false,
-    "graph_case_id": ""
+    "summary": "Risk score on card C05876-K2: $30.91 in-person on 2016-12-18, scored 0.55 by the bank's model. $30.91 is at or below the card's 95th-percentile amount ($226.05); in_person is 93% of this card's history; 21 prior transactions in billing region 494; product code w is 93% of this card's history. Case memory returned 2 comparable closed investigation(s) (CC-2370, CC-0003), used as context rather than as a finding about this transaction. Assessed as legitimate at fraud probability 0.02; the bank model's score of 0.55 is not corroborated by the graph. Recommended: CREATE_CASE (auto), ALLOW_TRANSACTION (auto), CLOSE_NO_FRAUD (auto).",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-2016-012"
   },
   "evidence_requests": [
     {
       "type": "customer_validation",
-      "asked_after_step": 7,
+      "asked_after_step": 8,
       "assumed_response": "Simulated response: the cardholder confirms the transaction as their own."
     }
   ],
@@ -129,6 +129,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 0,
-  "latency_s": 0.18
+  "tokens": 14939,
+  "latency_s": 3.2
 }

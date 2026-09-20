@@ -100,7 +100,25 @@ class CaseMemory:
     @staticmethod
     def _case_payload(answer: AnswerFile) -> dict:
         c = answer.case
+        # The answer file's pattern enum buckets both undocumented typologies
+        # under "undocumented", so the graph edge points at the specific one
+        # instead. Only a case that actually concluded a typology gets the edge:
+        # a detector may fire on a case the agent went on to call legitimate,
+        # and linking that to a fraud typology in the graph would mislead the
+        # next investigation that retrieves it.
+        from ..analysis.patterns import DETECTOR_TO_PATTERN_ID
+
+        detector = ""
+        if c.pattern.value != "none":
+            matched = [
+                f for f in answer.findings
+                if f.matched and f.name in DETECTOR_TO_PATTERN_ID
+            ]
+            if matched:
+                best = max(matched, key=lambda f: f.strength).name
+                detector = DETECTOR_TO_PATTERN_ID[best]
         return {
+            "pattern_detector": detector,
             "graph_case_id": f"CASE-2016-{answer.case_id.replace('HHG-', '')}",
             "case_id": answer.case_id,
             "status": c.status.value,

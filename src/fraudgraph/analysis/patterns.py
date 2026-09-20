@@ -23,6 +23,21 @@ SMALL_AUTH_ABS = 5.0
 RING_MIN_CARDS = 8
 RING_WINDOW_DAYS = 30
 
+#: Detector name -> the FraudPattern vertex id loaded into the graph by
+#: fraudgraph.ingest.tg_export. The two differ because the detectors are named
+#: for what they look for while the graph vertices are named for the typology
+#: the challenge documents. tests/test_tg_loading.py asserts the mapping is
+#: total and that every target exists in the exported catalogue.
+DETECTOR_TO_PATTERN_ID = {
+    "card_testing": "card_testing",
+    "cnp_fraud": "card_not_present_fraud",
+    "cnp_new_device": "card_not_present_new_device",
+    "out_of_region_use": "out_of_region_use",
+    "account_takeover": "account_takeover",
+    "shared_device_ring": "shared_device_ring",
+    "sub_threshold_structuring": "sub_threshold_structuring",
+}
+
 
 @dataclass
 class Episode:

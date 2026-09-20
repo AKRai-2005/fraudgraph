@@ -84,7 +84,19 @@ def run_all(backend: str = "auto", use_llm: bool = True, only: list[str] | None 
         "written_to_graph": sum(1 for r in results if r.case.written_to_graph),
         "total_tool_calls": sum(r.tool_calls for r in results),
         "total_tokens": sum(r.tokens for r in results),
+        "llm_stats": getattr(agent.narrator, "stats", None) if agent.narrator else None,
     }
+    st = summary.get("llm_stats") or {}
+    if st.get("calls_rate_limited"):
+        print(
+            f"
+  NOTE: {st['calls_rate_limited']} LLM call(s) hit the provider's rate "
+            f"limit and fell back to the deterministic template. The verdicts, actions "
+            f"and SAR decisions are unaffected -- they never come from the LLM -- but "
+            f"some narratives are templates. Re-run when the quota resets, or raise "
+            f"FG_LLM_MIN_INTERVAL.",
+            file=sys.stderr,
+        )
     (PATHS.build / "benchmark_summary.json").write_text(json.dumps(summary, indent=2))
     return summary
 

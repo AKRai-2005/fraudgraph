@@ -168,3 +168,52 @@ def test_queries_split_matches_the_catalogue():
     names = {re.match(r"CREATE QUERY (\w+)", s).group(1) for s in stmts}
     expected = {n for n in CATALOGUE if n != "write_case"} | {"graph_health"}
     assert expected <= names, f"missing installed queries: {sorted(expected - names)}"
+
+
+def test_every_destination_clause_guards_against_the_header_row():
+    """`header="true"` does not skip the header when the file is posted."""
+    job = _loading_job()
+    body = job[job.index("{"):]
+    clauses = re.findall(r"TO (?:VERTEX|EDGE)\s+\w+.*?(?=,\s*\n\s*TO |\n\s*USING)", body, re.S)
+    assert len(clauses) >= 18, f"expected every load clause, found {len(clauses)}"
+    for c in clauses:
+        assert re.search(r'\$0\s*!=\s*"', c), (
+            f"clause has no header guard: {' '.join(c.split())[:80]}"
+        )
+
+
+def test_detector_pattern_mapping_is_total_and_lands_in_the_catalogue():
+    """Every fraud detector maps to a FraudPattern vertex that tg_export loads.
+
+    Names are read from what the detectors actually emit (``name="..."`` on the
+    PatternFinding) rather than from function names, which do not always match.
+    """
+    from fraudgraph.analysis.patterns import DETECTOR_TO_PATTERN_ID
+
+    src_dir = Path(__file__).resolve().parents[1] / "src" / "fraudgraph"
+    patterns_src = (src_dir / "analysis" / "patterns.py").read_text(encoding="utf-8")
+    emitted = set(re.findall(r'name="([a-z_]+)", matched=', patterns_src))
+    assert emitted, "could not read detector names from patterns.py"
+
+    # the two exculpatory detectors argue for legitimate use and own no typology
+    inculpatory = emitted - {"recurring_charge", "consistent_with_history"}
+    assert inculpatory == set(DETECTOR_TO_PATTERN_ID), (
+        f"unmapped: {sorted(inculpatory - set(DETECTOR_TO_PATTERN_ID))}; "
+        f"stale: {sorted(set(DETECTOR_TO_PATTERN_ID) - inculpatory)}"
+    )
+
+    export = (src_dir / "ingest" / "tg_export.py").read_text(encoding="utf-8")
+    catalogue = set(re.findall(r'^\s*\("([a-z_]+)",\s*"[A-Z]', export, re.M))
+    assert catalogue, "could not read the pattern catalogue from tg_export.py"
+    missing = set(DETECTOR_TO_PATTERN_ID.values()) - catalogue
+    assert not missing, f"mapped to FraudPattern ids that are never loaded: {sorted(missing)}"
+
+
+def test_only_a_concluded_typology_is_linked_in_the_graph():
+    """A detector may fire on a case the agent calls legitimate; that must not
+    become a CASE_MATCHES_PATTERN edge."""
+    src = (Path(__file__).resolve().parents[1] / "src" / "fraudgraph" /
+           "memory" / "case_memory.py").read_text(encoding="utf-8")
+    assert 'if c.pattern.value != "none":' in src, (
+        "case_memory must gate the typology link on the case's own verdict pattern"
+    )

@@ -19,12 +19,16 @@ CREATE QUERY txn_detail(STRING txn_id) FOR GRAPH FraudInvestigation {
 /* ---------------------------------------------------------------- card_window
  * Transactions on one card inside a window around a point of interest.
  */
+/* The window is taken in whole seconds, computed by the caller. GSQL here has
+   no to_int and no interval arithmetic (`INTERVAL n SECOND * -1` is a parse
+   error), so the hours -> seconds conversion happens in the client and
+   subtraction uses datetime_sub. */
 CREATE QUERY card_window(STRING card_id, DATETIME center_ts,
-                         DOUBLE hours_before = 72, DOUBLE hours_after = 72,
+                         INT sec_before = 259200, INT sec_after = 259200,
                          INT lim = 500) FOR GRAPH FraudInvestigation {
   DATETIME lo, hi;
-  lo = datetime_add(center_ts, INTERVAL (to_int(hours_before * 3600)) SECOND * -1);
-  hi = datetime_add(center_ts, INTERVAL (to_int(hours_after * 3600)) SECOND);
+  lo = datetime_sub(center_ts, INTERVAL sec_before SECOND);
+  hi = datetime_add(center_ts, INTERVAL sec_after SECOND);
   Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;
   T = SELECT t FROM C:c -(MADE:e)- Transaction:t
@@ -50,7 +54,8 @@ CREATE QUERY card_profile(STRING card_id, DATETIME before_ts, INT lookback_days 
   MinAccum<DATETIME> @@first_ts;
   MaxAccum<DATETIME> @@last_ts;
   DATETIME lo;
-  lo = datetime_add(before_ts, INTERVAL lookback_days DAY * -1);
+  /* see card_window: datetime_sub, not a negative interval */
+  lo = datetime_sub(before_ts, INTERVAL lookback_days DAY);
 
   Start = {PaymentCard.*};
   C = SELECT c FROM Start:c WHERE c.card_id == card_id;

@@ -24,7 +24,7 @@
         ]
       },
       {
-        "claim": "The card's established behaviour before this alert: 82 transactions, median $107.91, 95th percentile $606.13, maximum $1,960.95; online accounts for 5% of them.",
+        "claim": "The card's established behaviour before this alert: 82 transactions, median $107.90, 95th percentile $608.19, maximum $1,960.95; online accounts for 5% of them.",
         "source": "graph",
         "ref": "query:card_profile(card_id=C12265-K2, before_ts=2016-12-03 06:04:26)",
         "entity_ids": [
@@ -56,33 +56,33 @@
         ]
       },
       {
-        "claim": "Case memory: closed case CC-0487 (cleared, pattern none, exposure $0.00) matches this alert on transactions in that case came from the same device profile 'Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1920x1080'.",
-        "source": "graph",
-        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
-        "entity_ids": [
-          "CC-0487"
-        ]
-      },
-      {
         "claim": "Case memory: closed case CC-1447 (cleared, pattern none, exposure $0.00) matches this alert on transactions in that case came from the same device profile 'Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1920x1080'.",
         "source": "graph",
         "ref": "query:similar_closed_cases(pattern=none, channel=online)",
         "entity_ids": [
           "CC-1447"
         ]
+      },
+      {
+        "claim": "Case memory: closed case CC-0487 (cleared, pattern none, exposure $0.00) matches this alert on transactions in that case came from the same device profile 'Trident/7.0 | Windows 10 | ie 11.0 for desktop | 1920x1080'.",
+        "source": "graph",
+        "ref": "query:similar_closed_cases(pattern=none, channel=online)",
+        "entity_ids": [
+          "CC-0487"
+        ]
       }
     ],
     "similar_prior_cases": [
       "CC-2277",
       "CC-2447",
-      "CC-0487",
       "CC-1447",
-      "CC-1815",
-      "CC-2650"
+      "CC-0487",
+      "CC-1349",
+      "CC-4559"
     ],
-    "summary": "Risk score on card C12265-K2: $125.08 online on 2016-12-03, scored 0.52 by the bank's model. Product code r never used on this card; online accounts for only 4.9% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2277, CC-2447, CC-0487), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.40 with confidence 0.79; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
-    "written_to_graph": false,
-    "graph_case_id": ""
+    "summary": "Risk score on card C12265-K2: $125.08 online on 2016-12-03, scored 0.52 by the bank's model. Product code r never used on this card; online accounts for only 4.9% of this card's history. Case memory returned 6 comparable closed investigation(s) (CC-2277, CC-2447, CC-1447), used as context rather than as a finding about this transaction. Verdict uncertain at probability 0.40 with confidence 0.79; the evidence does not yet settle the question. Recommended: CREATE_CASE (auto).",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-2016-020"
   },
   "evidence_requests": [],
   "next_best_actions": {
@@ -112,6 +112,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
-  "tokens": 0,
-  "latency_s": 0.2
+  "tokens": 14939,
+  "latency_s": 4.33
 }

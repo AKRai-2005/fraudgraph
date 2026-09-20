@@ -119,7 +119,7 @@ def write_summary(answer: AnswerFile, feats, risk, narrator=None) -> str:
 def _deterministic_sar(answer: AnswerFile, feats, risk, shared) -> str:
     """Who, what, when, where, how, why -- FinCEN's narrative structure."""
     c = answer.case
-    dates = c.affected_txn_ids and answer.sar.activity_dates or []
+    dates = list(answer.sar.activity_dates or [])
     first_date = dates[0] if dates else feats.ts[:10]
     last_date = dates[1] if len(dates) > 1 else first_date
     matched = [f for f in answer.findings if f.matched and f.name not in

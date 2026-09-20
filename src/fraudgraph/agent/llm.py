@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
 from typing import Any
 
 import httpx
@@ -43,13 +45,43 @@ SYSTEM = (
 
 
 class _Provider:
+    """Base provider with the free-tier pacing every hosted model needs.
+
+    Gemini's free tier is rate limited per minute and per day. Without pacing a
+    20-case run burns through the per-minute allowance in the first few cases
+    and every later call returns 429, which the narrator silently absorbs as a
+    template fallback -- the run still completes, but half the narratives are
+    templates and nothing says so. So calls are spaced, 429s are retried with
+    backoff, and ``rate_limited`` records how many gave up, which the benchmark
+    reports.
+    """
+
+    #: minimum seconds between calls; free tiers are typically 10-15 RPM
+    min_interval_s = float(LLM.min_interval_s)
+    max_retries = 3
+
     def __init__(self) -> None:
         self.tokens_used = 0
         self.calls = 0
+        self.rate_limited = 0
         self.errors: list[str] = []
+        self._lock = threading.Lock()
+        self._last_call = 0.0
+
+    def _pace(self) -> None:
+        with self._lock:
+            wait = self.min_interval_s - (time.monotonic() - self._last_call)
+            if wait > 0:
+                time.sleep(wait)
+            self._last_call = time.monotonic()
 
     def complete(self, prompt: str, max_tokens: int | None = None) -> str:
         raise NotImplementedError
+
+    def _redact(self, text: str) -> str:
+        """Never let the API key reach a log, a traceback or the dashboard."""
+        key = getattr(self, "api_key", "")
+        return str(text).replace(key, "<REDACTED>") if key else str(text)
 
 
 class GeminiProvider(_Provider):
@@ -60,6 +92,18 @@ class GeminiProvider(_Provider):
         self.model, self.api_key = model, api_key
 
     def complete(self, prompt: str, max_tokens: int | None = None) -> str:
+        for attempt in range(self.max_retries):
+            try:
+                return self._call(prompt, max_tokens)
+            except _RateLimited as exc:
+                if attempt == self.max_retries - 1:
+                    self.rate_limited += 1
+                    raise RuntimeError(str(exc)) from None
+                time.sleep(exc.retry_after or (4 * (attempt + 1)))
+        return ""
+
+    def _call(self, prompt: str, max_tokens: int | None = None) -> str:
+        self._pace()
         url = GEMINI_URL.format(model=self.model)
         body = {
             "systemInstruction": {"parts": [{"text": SYSTEM}]},
@@ -69,11 +113,23 @@ class GeminiProvider(_Provider):
                 "maxOutputTokens": int(max_tokens or LLM.max_output_tokens),
             },
         }
+        # The key goes in a header, not the query string: a 4xx from httpx
+        # embeds the request URL in the exception message, which would put the
+        # key into every traceback and log line.
         r = httpx.post(
-            url, params={"key": self.api_key}, json=body, timeout=LLM.timeout_s,
-            headers={"content-type": "application/json"},
+            url, json=body, timeout=LLM.timeout_s,
+            headers={"content-type": "application/json", "x-goog-api-key": self.api_key},
         )
-        r.raise_for_status()
+        if r.status_code == 429:
+            raise _RateLimited(
+                f"Gemini rate limit / quota exhausted for {self.model}",
+                _retry_after(r),
+            )
+        if r.status_code >= 400:
+            raise RuntimeError(
+                f"Gemini {r.status_code} for model {self.model}: "
+                f"{self._redact(r.text)[:300]}"
+            )
         data = r.json()
         self.calls += 1
         usage = data.get("usageMetadata") or {}
@@ -109,12 +165,40 @@ class AnthropicProvider(_Provider):
             },
             timeout=LLM.timeout_s,
         )
-        r.raise_for_status()
+        if r.status_code >= 400:
+            raise RuntimeError(
+                f"Anthropic {r.status_code} for model {self.model}: "
+                f"{self._redact(r.text)[:300]}"
+            )
         data = r.json()
         self.calls += 1
         u = data.get("usage") or {}
         self.tokens_used += int(u.get("input_tokens", 0)) + int(u.get("output_tokens", 0))
         return "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text").strip()
+
+
+class _RateLimited(Exception):
+    def __init__(self, msg: str, retry_after: float | None = None):
+        super().__init__(msg)
+        self.retry_after = retry_after
+
+
+def _retry_after(r) -> float | None:
+    """Honour Retry-After, and the RetryInfo Google returns in the body."""
+    hdr = r.headers.get("retry-after")
+    if hdr:
+        try:
+            return float(hdr)
+        except ValueError:
+            pass
+    try:
+        for d in (r.json().get("error") or {}).get("details") or []:
+            delay = d.get("retryDelay")
+            if isinstance(delay, str) and delay.endswith("s"):
+                return float(delay[:-1])
+    except Exception:  # noqa: BLE001
+        pass
+    return None
 
 
 class NullProvider(_Provider):
@@ -153,6 +237,17 @@ class Narrator:
     def tokens_used(self) -> int:
         return self.provider.tokens_used
 
+    @property
+    def stats(self) -> dict:
+        p = self.provider
+        return {
+            "enabled": self.enabled,
+            "calls_succeeded": p.calls,
+            "calls_rate_limited": p.rate_limited,
+            "tokens": p.tokens_used,
+            "errors": p.errors[-3:],
+        }
+
     # ------------------------------------------------------------- writing
     def _evidence_block(self, answer, feats) -> str:
         lines = [
@@ -182,7 +277,9 @@ class Narrator:
         try:
             return self.provider.complete(prompt, max_tokens=520)
         except Exception as exc:  # noqa: BLE001
-            self.provider.errors.append(f"summary: {type(exc).__name__}")
+            self.provider.errors.append(
+                self.provider._redact(f"summary: {type(exc).__name__}: {exc}")[:300]
+            )
             return ""
 
     def rewrite_sar(self, base: str, answer, feats, risk) -> str:
@@ -200,7 +297,9 @@ class Narrator:
         try:
             return self.provider.complete(prompt, max_tokens=1100)
         except Exception as exc:  # noqa: BLE001
-            self.provider.errors.append(f"sar: {type(exc).__name__}")
+            self.provider.errors.append(
+                self.provider._redact(f"sar: {type(exc).__name__}: {exc}")[:300]
+            )
             return ""
 
     # ------------------------------------------------------------ planning
@@ -235,7 +334,9 @@ class Narrator:
         try:
             raw = self.provider.complete(prompt, max_tokens=700)
         except Exception as exc:  # noqa: BLE001
-            self.provider.errors.append(f"plan: {type(exc).__name__}")
+            self.provider.errors.append(
+                self.provider._redact(f"plan: {type(exc).__name__}: {exc}")[:300]
+            )
             return []
         return self._validate_plan(raw, already_run, max_new)
 

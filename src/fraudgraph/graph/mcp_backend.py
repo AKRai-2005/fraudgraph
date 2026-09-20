@@ -240,6 +240,9 @@ def _write_case(self, case: dict) -> dict:
                   for d in case.get("connected_device_profiles", [])]
         edges += [("CASE_CITES_PRIOR", "ClosedCase", str(p))
                   for p in case.get("similar_prior_cases", [])]
+        typology = case.get("pattern_detector") or case.get("pattern")
+        if typology and typology != "none":
+            edges.append(("CASE_MATCHES_PATTERN", "FraudPattern", typology))
         n_ev = 0
         for i, ev in enumerate(case.get("evidence", [])):
             eid = f"{gid}-E{i:02d}"

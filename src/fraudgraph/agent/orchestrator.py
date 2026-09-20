@@ -673,13 +673,16 @@ class InvestigationAgent:
 
         case.summary = write_summary(answer, feats, risk, self.narrator)
         if sar.file:
-            sar.narrative = write_sar_narrative(answer, feats, risk, shared, self.narrator)
+            # Populate the structured fields first: the narrative quotes the
+            # activity dates, so writing it before they are set would put the
+            # flagged transaction's own date on both ends of the range.
             sar.subjects = sorted({
                 feats.customer_id, feats.card_id, *connected_cards[:10],
                 *( [feats.device_profile] if feats.device_profile else [] ),
             })
             sar.total_amount_usd = episode.exposure
             sar.activity_dates = [episode.first_ts, episode.last_ts] if episode.first_ts else []
+            sar.narrative = write_sar_narrative(answer, feats, risk, shared, self.narrator)
         if self.narrator is not None:
             answer.tokens = getattr(self.narrator, "tokens_used", 0)
 
