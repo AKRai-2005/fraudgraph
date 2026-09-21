@@ -23,11 +23,15 @@ system setting, and the header toggle overrides either way (stored per browser).
 | `--accent` | `#274690` | `#9bb1e6` | things you can act on — nothing else |
 | `--fraud` / `--legit` / `--uncertain` | `#a3261b` / `#2c6639` / `#855606` | `#f08d7f` / `#86c596` / `#dfae5c` | verdicts only |
 
-**Every text colour measures ≥ 4.5:1 against every surface in both themes**
-(worst case: `--ink-3` on `--wash`, 4.96:1 light, 5.25:1 dark). The palette it
-replaced failed AA in five places, including the primary button (3.20:1).
+**Every text colour measures ≥ 4.5:1 against every surface in both themes**,
+the verdict and accent washes included (worst case: `--ink-3` on `--fraud-wash`,
+4.90:1 light; `--ink-3` on `--uncertain-wash`, 4.96:1 dark). As rendered, the
+lowest-contrast text anywhere in the console is 4.96:1 in either theme. The
+palette it replaced failed AA in five places, including the primary button
+(3.20:1).
 
-No colour literal appears outside the two token blocks.
+No colour literal appears outside the token blocks, except white paper for
+print. Dark is written twice (system setting, toggle) and the two are identical.
 
 ## Type
 
@@ -90,7 +94,9 @@ Figures are tabular everywhere.
 
 ## How it was checked
 
-* Contrast: every token pair computed with the WCAG formula, both themes.
+* Contrast: every token pair computed with the WCAG formula, both themes; and
+  every visible run of text as rendered — HTML, SVG labels, form values,
+  placeholders — against the background actually behind it.
 * Layout: 320, 375, 414, 768, 1024, 1280, 1440 and 1920px across all five
   views — no page-level horizontal overflow and no element past the viewport
   edge at any of them; the queue table fits without scrolling from 1024 up.
@@ -98,10 +104,31 @@ Figures are tabular everywhere.
   every route into a case, approve and reject, both re-run paths including the
   live stream, ad-hoc investigation, graph, theme — with no console errors.
 
-Layout and behaviour are automated in `tests/test_frontend.py` (`python -m
-pytest -m browser`); contrast was computed once. The file holds the 29 checks
-as one test each, the layout sweep at all eight widths, and a check that
-"Actions simulated" is never cut off. Any uncaught exception or console error fails the
-test it happened in. The tests were checked against deliberate breakage — no
+All of it is automated.
+
+* `tests/test_design_tokens.py` (no browser, under a second) checks the token
+  matrix in both themes, that the two dark blocks agree, that dark overrides
+  every colour light sets, and that no colour bypasses a token in the CSS,
+  `app.js` or `index.html`.
+* `tests/test_frontend.py` (`python -m pytest -m browser`) holds the 29 checks
+  as one test each, the layout sweep at all eight widths, a check that
+  "Actions simulated" is never cut off, and the rendered contrast check: about
+  1,300 runs of text per pass, in light and dark at 1440 and 375px, across
+  every view, both tooltips, a hovered row and button, the toast, the live
+  investigation, an error box and a drifted re-run. Large text is held to
+  3:1, everything else to 4.5:1; disabled controls are exempt, as in WCAG.
+  Any uncaught exception or console error fails the test it happened in.
+
+The tests were checked against deliberate breakage, and each was caught: no
 approver name, a one-way sort, wall-clock latency in the live panel, an
-unsaved theme, an element wider than the page — and each was caught.
+unsaved theme, an element wider than the page, a paler `--ink-3`, a colour
+literal, a stamp set in its own ink, text faded with opacity, chart labels in
+a rule colour, and the two dark blocks drifting apart. The middle three pass
+the token tests — two valid tokens paired badly, opacity, an SVG fill — and
+only the rendered check sees them.
+
+The rendered check composites the backgrounds of a text's ancestors. It would
+miss text laid over a positioned sibling; the console has none (bars sit
+beside their figures, tooltips carry their own background). Hover states
+beyond the two it forces use only `--wash` and `--accent-strong`, which the
+token matrix covers.

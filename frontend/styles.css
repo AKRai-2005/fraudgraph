@@ -8,8 +8,9 @@
    for verdicts -- the only saturated marks on the page, used like stamps.
 
    Rules, so the next change does not undo this:
-   * No colour literals outside the two token blocks. Every pair of text and
-     surface tokens below measures >= 4.5:1 (WCAG AA) in both themes.
+   * No colour literals outside the token blocks (print excepted). Every pair of text and
+     surface tokens below measures >= 4.5:1 (WCAG AA) in both themes;
+     tests/test_design_tokens.py and tests/test_frontend.py hold it to that.
    * Type scale is fixed: 12 13 14 16 20 26 34. Nothing smaller than 12px.
    * Spacing is a 4px scale: 4 8 12 16 24 32 48.
    * Two radii: 2px on controls and marks, 4px on containers.

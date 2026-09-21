@@ -135,8 +135,8 @@ class Console:
 
 
 def _new_console(browser, server, **ctx) -> tuple[Console, object]:
-    context = browser.new_context(viewport={"width": 1440, "height": 900},
-                                  color_scheme="light", **ctx)
+    opts = {"viewport": {"width": 1440, "height": 900}, "color_scheme": "light", **ctx}
+    context = browser.new_context(**opts)
     return Console(context.new_page(), server), context
 
 
@@ -559,3 +559,193 @@ def test_simulated_actions_are_always_visible(layout_page, width):
     expect(item).to_contain_text("simulated")
     box, strip = item.bounding_box(), c.page.locator("#statusStrip").bounding_box()
     assert box["x"] >= strip["x"] - 1 and box["x"] + box["width"] <= strip["x"] + strip["width"] + 1
+
+
+# --------------------------------------------------- contrast, as rendered
+# test_design_tokens.py proves every text token clears AA on every surface
+# token. This measures what the page actually draws: each visible run of text
+# -- HTML, SVG labels, form values, placeholders -- against the background
+# really behind it, found by compositing the background colours of its
+# ancestors, with element opacity applied to the text. It catches pairings the
+# matrix does not list and anything that reaches the page without a token.
+#
+# What it does not see: text over a positioned sibling rather than an ancestor
+# (the console has none -- bars sit beside their figures, tooltips carry their
+# own background), and hover states beyond the two it forces; those use only
+# tokens the matrix covers. Disabled controls are exempt, as WCAG exempts them.
+
+_CONTRAST = r"""(root) => {
+  const scope = root ? document.querySelector(root) : document.body;
+  if (!scope) return { missing: root };
+  const rgba = (s) => {
+    const m = /rgba?\(([^)]+)\)/.exec(s || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  const over = (top, under) =>
+    [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3])).concat(1);
+  const lum = (c) => {
+    const v = c.slice(0, 3).map((x) => { x /= 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  };
+  const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+  const backdrop = (el) => {
+    const layers = [];
+    for (let n = el; n; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (cs.backgroundImage !== 'none') return null;
+      const c = rgba(cs.backgroundColor);
+      if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+    }
+    return layers.reduceRight((under, top) => over(top, under), [255, 255, 255, 1]);
+  };
+  const opacity = (el) => {
+    let o = 1;
+    for (let n = el; n; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity);
+    return o;
+  };
+  const cls = (el) => (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).join('.');
+  const name = (el, text) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+    + (cls(el) ? '.' + cls(el) : '') + ' "' + text.trim().replace(/\s+/g, ' ').slice(0, 40) + '"';
+  const shown = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.width >= 2 && r.height >= 2 && el.checkVisibility({ visibilityProperty: true });
+  };
+
+  const res = { checked: 0, failures: [], unknown: [], min: 99, minAt: '' };
+  const measure = (el, colour, text, extraAlpha) => {
+    const fg0 = rgba(colour);
+    if (!fg0) { res.unknown.push('colour ' + colour + ' on ' + name(el, text)); return; }
+    const bg = backdrop(el);
+    if (!bg) { res.unknown.push('background image behind ' + name(el, text)); return; }
+    const fg = over([fg0[0], fg0[1], fg0[2], fg0[3] * extraAlpha * opacity(el)], bg);
+    const cs = getComputedStyle(el);
+    const px = parseFloat(cs.fontSize), weight = parseInt(cs.fontWeight, 10) || 400;
+    const need = px >= 24 || (px >= 18.66 && weight >= 700) ? 3 : 4.5;
+    const r = ratio(fg, bg);
+    res.checked += 1;
+    if (r < res.min) { res.min = r; res.minAt = name(el, text); }
+    if (r < need) res.failures.push(`${name(el, text)}: ${r.toFixed(2)} < ${need}`);
+  };
+
+  const all = [scope, ...scope.querySelectorAll('*')];
+  for (const el of all) {
+    if (el.closest(':disabled') || !shown(el)) continue;
+    const text = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('');
+    if (el instanceof SVGElement) {
+      if (text.trim()) {
+        const cs = getComputedStyle(el);
+        if (cs.fill !== 'none') measure(el, cs.fill, text, parseFloat(cs.fillOpacity));
+      }
+      continue;
+    }
+    if (el.matches('input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea')) {
+      if (el.value) measure(el, getComputedStyle(el).color, el.value, 1);
+      if (el.placeholder) measure(el, getComputedStyle(el, '::placeholder').color, el.placeholder, 1);
+      continue;
+    }
+    if (el.matches('option')) continue;       // drawn by the platform's own menu
+    if (text.trim()) measure(el, getComputedStyle(el).color, text, 1);
+  }
+  return res;
+}"""
+
+
+class Contrast:
+    def __init__(self, page):
+        self.page, self.checked, self.failures, self.unknown = page, 0, [], []
+        self.min, self.min_at = 99.0, ""
+
+    def measure(self, state: str, root: str | None = None) -> None:
+        r = self.page.evaluate(_CONTRAST, root)
+        assert "missing" not in r, f"{state}: nothing matches {root}"
+        assert r["checked"] > 0, f"{state}: no text measured under {root}"
+        self.checked += r["checked"]
+        self.failures += [f"[{state}] {f}" for f in r["failures"]]
+        self.unknown += [f"[{state}] {u}" for u in r["unknown"]]
+        if r["min"] < self.min:
+            self.min, self.min_at = r["min"], f"[{state}] {r['minAt']}"
+
+
+@pytest.mark.parametrize("width", [1440, 375])
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_all_rendered_text_meets_aa(browser, server, theme, width):
+    """Every state a person can reach without breaking anything, plus two that
+    are hard to reach on purpose: an error box and a drifted re-run."""
+    c, context = _new_console(browser, server, color_scheme=theme, reduced_motion="reduce",
+                              viewport={"width": width, "height": 900})
+    page, m = c.page, Contrast(c.page)
+    try:
+        c.load()
+        assert page.evaluate("currentTheme()") == theme
+        m.measure("overview")
+        page.locator("#divergenceChart .pt").first.focus()
+        m.measure("chart tooltip", "#divergenceTip")
+
+        c.tab("Queue").click()
+        m.measure("queue")
+        page.locator("#queueTable tbody tr[data-case]").first.hover()
+        m.measure("queue row, hovered", "#queueTable tbody tr[data-case]")
+        page.fill("#adhocTxn", "abc")
+        page.click("#adhocBtn")
+        m.measure("ad hoc refusal", "#adhocMsg")
+
+        # a case with an approval still open, so the Approve button is there to
+        # measure -- the approval tests above may have used up HHG-014's
+        queue = page.request.get(server + "/api/queue").json()
+        pending = [r["case_id"] for r in queue if r.get("awaiting_approval")]
+        assert pending, "no case awaits approval, so the Approve button cannot be measured"
+        c.open_case("HHG-014" if "HHG-014" in pending else pending[0])
+        page.wait_for_function("document.querySelectorAll('#graphSvg circle').length > 5")
+        page.evaluate("document.querySelectorAll('#caseBody details').forEach((d) => { d.open = true; })")
+        m.measure("case, every section open")
+        page.locator("#graphSvg circle").first.dispatch_event("pointerenter")
+        m.measure("graph tooltip", "#graphTip")
+        page.locator(".appr-yes").first.hover()
+        m.measure("approve button, hovered", ".appr-yes")
+        page.locator(".appr-yes").first.click()          # no name: refused with a toast
+        m.measure("toast", "#toast")
+
+        page.click("#watchBtn")
+        page.wait_for_function(r"/p=[01]\.\d\d/.test(document.querySelector('#liveState').textContent)",
+                               timeout=SLOW)
+        m.measure("live investigation", "#livePanel")
+
+        c.tab("Memory").click()
+        expect(page.locator("#memoryBody .ledger")).to_have_count(2)
+        m.measure("memory")
+        c.tab("Model & policy").click()
+        page.wait_for_function("document.querySelectorAll('#modelBody table').length >= 4")
+        m.measure("model")
+
+        assert not c.errors, c.errors
+
+        # A drifted re-run is hard to produce on demand, so the browser is handed
+        # one: the real record with its provenance marked as a re-run whose facts
+        # differ. Only the rendering is under test here.
+        def drifted(route):
+            rec = route.fetch().json()
+            rec["provenance"] = {"kind": "rerun", "backend": "local", "at": rec.get("generated_at")}
+            rec["drift"] = {"facts_match": False, "n_differences": 1, "differences": [
+                {"path": "case.verdict", "published": "fraud", "current": "uncertain"}]}
+            route.fulfill(json=rec)
+        page.route("**/api/cases/HHG-003", drifted)
+        c.open_case("HHG-003")
+        expect(page.locator(".provenance.drifted")).to_be_visible()
+        m.measure("drifted re-run", ".provenance")
+        page.unroute("**/api/cases/HHG-003")
+
+        page.route("**/api/memory", lambda route: route.fulfill(
+            status=500, json={"detail": "forced by the contrast test"}))
+        c.tab("Memory").click()
+        expect(page.locator("#view-memory .errorbox")).to_be_visible()
+        m.measure("error box", "#view-memory .errorbox")
+    finally:
+        context.close()
+
+    assert not m.unknown, "could not measure:\n" + "\n".join(m.unknown)
+    assert m.checked > 400, f"only {m.checked} runs of text measured; the tour is not reaching the page"
+    assert not m.failures, (f"{len(m.failures)} of {m.checked} runs of text below AA "
+                            f"({theme}, {width}px):\n" + "\n".join(m.failures[:40]))
+    print(f"\n{theme} {width}px: {m.checked} runs of text, lowest {m.min:.2f}:1 at {m.min_at}")
