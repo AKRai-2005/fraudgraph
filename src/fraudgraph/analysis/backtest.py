@@ -157,6 +157,32 @@ def _leakage(answer, trig: Trigger, closed_at_by_id: dict) -> list[str]:
     return bad
 
 
+def _window_leakage(answer, trig: Trigger) -> list[str]:
+    """Any transaction query whose window reached past the moment the case opened.
+
+    Case memory was time-boxed from the first version of this backtest.
+    Transaction windows were not, and nothing checked them: the agent looked
+    30 days past the flagged transaction for an episode and the same either
+    side for a device ring, so a replayed alert could count cards compromised
+    after its own investigation had opened. This reads the bounds actually
+    sent, from the tool ledger, rather than trusting that the clamp was
+    applied at every call site.
+    """
+    bad = []
+    cutoff = pd.Timestamp(trig.as_of)
+    for call in answer.tool_log:
+        p = call.params or {}
+        end = None
+        if call.name == "card_window" and p.get("center_ts"):
+            end = pd.Timestamp(p["center_ts"]) + pd.Timedelta(
+                hours=float(p.get("hours_after") or 48.0))
+        elif p.get("to_ts"):
+            end = pd.Timestamp(p["to_ts"])
+        if end is not None and end > cutoff:
+            bad.append(f"{call.name} window ends {end}, after the case opened {trig.as_of}")
+    return bad
+
+
 def replay(
     n_per_class: int = 300, backend: str = "local", trigger_mode: str = "neutral",
     seed: int = 20260920, progress: bool = True, patterns: tuple[str, ...] = (),
@@ -221,7 +247,7 @@ def replay(
                              if answer.risk and answer.risk.bank_risk_score is not None
                              else None),
             truth_pattern=str(row.pattern),
-            leaked=_leakage(answer, trig, closed_at_by_id),
+            leaked=_leakage(answer, trig, closed_at_by_id) + _window_leakage(answer, trig),
         ))
         if progress and i % 25 == 0:
             done = len(results)
@@ -399,7 +425,7 @@ def report(res: dict) -> str:
                   f"an investigation from their own future", ""]
     else:
         lines += ["  no leakage: no case retrieved an investigation closed at or "
-                  "after its own alert", ""]
+                  "after its own alert, and no transaction window reached past it", ""]
 
     m = res["confusion"]
     lines += ["  Agent verdict vs the bank's recorded outcome:",

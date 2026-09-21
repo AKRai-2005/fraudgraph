@@ -63,6 +63,27 @@ class Trigger:
         """Kwargs every case-memory query takes, so none is missed."""
         return {"as_of": self.as_of} if self.as_of else {}
 
+    def cap_hours_after(self, centre_ts, hours: float) -> float:
+        """Shorten a forward window so it cannot pass ``as_of``.
+
+        Case memory was time-boxed from the start of the backtest; transaction
+        windows were not. The agent looks 72h past the flagged transaction for
+        a burst, 30 days past it for an episode, and 30 days either side for a
+        device ring -- so a replayed alert could see transactions that had not
+        happened when the investigation was opened. Live, ``as_of`` is empty
+        and nothing changes.
+        """
+        if not self.as_of or not centre_ts:
+            return hours
+        room = (pd.Timestamp(self.as_of) - pd.Timestamp(centre_ts)).total_seconds() / 3600.0
+        return max(0.0, min(float(hours), room))
+
+    def cap_ts(self, ts: str) -> str:
+        """Clamp an absolute window end to ``as_of``."""
+        if not self.as_of:
+            return ts
+        return str(min(pd.Timestamp(ts), pd.Timestamp(self.as_of)))
+
     @classmethod
     def from_case_pack_row(cls, row) -> "Trigger":
         rs = row.get("risk_score")
@@ -273,11 +294,12 @@ class InvestigationAgent:
         ts = ctx.ts
         ctx.profile = self.store.call("card_profile", card_id=ctx.card_id, before_ts=ts)
         ctx.window = self.store.call(
-            "card_window", card_id=ctx.card_id, center_ts=ts, hours_before=72, hours_after=72
+            "card_window", card_id=ctx.card_id, center_ts=ts, hours_before=72,
+            hours_after=tr.cap_hours_after(ts, 72),
         )
         ctx.wide_window = self.store.call(
             "card_window", card_id=ctx.card_id, center_ts=ts,
-            hours_before=24 * 180, hours_after=24 * 30, limit=4000
+            hours_before=24 * 180, hours_after=tr.cap_hours_after(ts, 24 * 30), limit=4000
         )
         st.log("tool",
                f"baseline established: {ctx.profile.get('n_txns', 0)} prior transactions on "
@@ -299,7 +321,7 @@ class InvestigationAgent:
             plan.append("region history")
             if int(ctx.region_test.get("prior_txns_in_region") or 0) == 0:
                 lo = str(pd.Timestamp(ts) - pd.Timedelta(days=14))
-                hi = str(pd.Timestamp(ts) + pd.Timedelta(days=14))
+                hi = st.trigger.cap_ts(str(pd.Timestamp(ts) + pd.Timedelta(days=14)))
                 ctx.region_cluster = self.store.call(
                     "region_neighbors", region_id=t["addr1"], from_ts=lo, to_ts=hi
                 )
@@ -314,7 +336,9 @@ class InvestigationAgent:
             if int(ctx.device_test.get("prior_txns_on_device") or 0) == 0 or \
                     t.get("id_23") in ("IP_PROXY:ANONYMOUS", "IP_PROXY:HIDDEN"):
                 lo = str(pd.Timestamp(ts) - pd.Timedelta(days=P.RING_WINDOW_DAYS))
-                hi = str(pd.Timestamp(ts) + pd.Timedelta(days=P.RING_WINDOW_DAYS))
+                hi = st.trigger.cap_ts(
+                    str(pd.Timestamp(ts) + pd.Timedelta(days=P.RING_WINDOW_DAYS))
+                )
                 ctx.device_ring = self.store.call(
                     "device_neighbors", device_profile=t["device_profile"],
                     from_ts=lo, to_ts=hi,

@@ -241,3 +241,63 @@ def test_a_tiny_replay_runs_end_to_end_without_leaking():
     assert res["leakage_violations"] == 0
     assert res["n_errors"] == 0
     assert not math.isnan(res["auc"]["agent_probability"] or 0.0)
+
+
+# ------------------------------------------------------ transaction windows
+class _Call:
+    def __init__(self, name, **params):
+        self.name, self.params = name, params
+
+
+class _Ans:
+    def __init__(self, calls):
+        self.tool_log = calls
+
+
+def test_window_leakage_catches_a_forward_card_window():
+    """The second leak: case memory was time-boxed, transaction windows were not.
+
+    The agent looked 30 days past the flagged transaction, so a replayed alert
+    could count activity that happened after its own investigation opened.
+    """
+    from fraudgraph.analysis.backtest import _window_leakage
+
+    t = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
+    bad = _window_leakage(_Ans([_Call("card_window", center_ts="2016-07-31 00:00:00",
+                                      hours_after="720")]), t)
+    assert bad and "card_window" in bad[0]
+
+
+def test_window_leakage_catches_a_forward_device_ring():
+    from fraudgraph.analysis.backtest import _window_leakage
+
+    t = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
+    bad = _window_leakage(_Ans([_Call("device_neighbors", to_ts="2016-08-20 00:00:00")]), t)
+    assert bad and "device_neighbors" in bad[0]
+
+
+def test_window_leakage_allows_a_window_ending_before_opening():
+    from fraudgraph.analysis.backtest import _window_leakage
+
+    t = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
+    ok = _window_leakage(_Ans([
+        _Call("card_window", center_ts="2016-07-30 00:00:00", hours_after="24"),
+        _Call("device_neighbors", to_ts="2016-07-31 23:59:59"),
+    ]), t)
+    assert ok == []
+
+
+def test_the_trigger_clamps_forward_windows_only_when_replaying():
+    live = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
+    live.as_of = ""                                    # the live path
+    assert live.cap_hours_after("2016-07-31 00:00:00", 720) == 720
+    assert live.cap_ts("2016-09-01 00:00:00") == "2016-09-01 00:00:00"
+
+    replay = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
+    assert replay.cap_hours_after("2016-07-31 00:00:00", 720) == pytest.approx(24.0)
+    assert replay.cap_ts("2016-09-01 00:00:00").startswith("2016-08-01")
+
+
+def test_a_clamp_never_goes_negative_for_an_alert_after_opening():
+    t = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
+    assert t.cap_hours_after("2016-08-02 00:00:00", 72) == 0.0
