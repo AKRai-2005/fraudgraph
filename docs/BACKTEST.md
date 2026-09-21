@@ -36,7 +36,35 @@ never carried it. Live, it is empty and nothing changes: the history ends
 2016-11-06 and the exam pack starts 2016-11-22, so everything on disk is
 genuinely in the past. In a backtest it is load-bearing.
 
-All four runs below report **0 leakage violations**.
+**The first version of this backtest leaked anyway.** It time-boxed case
+memory but not *transactions*: the agent looks 72 hours past the flagged
+transaction for a burst, 30 days past it for an episode, and 30 days either
+side for a device ring. A replayed alert could therefore count cards
+compromised after its own investigation had opened. Every forward window is
+now clamped at `as_of`, and the replay reads the bounds actually sent from the
+tool ledger rather than trusting the clamp — `_window_leakage` in
+`analysis/backtest.py`.
+
+**It inflated the first report.** Isolated by re-running the old detector with
+only the clamp added: the general-sample AUC fell from **0.718 to 0.691**. The
+0.718 published in the first version of this document was measured with the
+leak and is withdrawn. What did *not* move is the headline — 9 of 9
+relational-fraud cases and 7 false fraud calls on 300 — so the claim the
+project rests on survived; a secondary number did not.
+
+All runs below report **0 leakage violations** of either kind.
+
+#### Why calibration is not clamped the same way
+
+The detector weights are measured by `scripts/measure_detectors.py`, which
+still looks forward. That is deliberate, and it is not the same leak. The
+weights exist to describe how informative a detector is *under the view the
+deployed agent actually has* — and on the exam the agent looks ±72h and
++30 days, because an investigation after the fact legitimately scopes the
+episode from what happened next. Clamping calibration at `opened_at` would
+calibrate the detectors for a view the deployed agent never takes. The
+backtest asks a stricter question — was the verdict right *at the moment the
+case opened*? — so it alone is clamped.
 
 ### 2. The trigger prior almost *is* the label
 
@@ -68,9 +96,9 @@ contain.
 
 ## Results
 
-600 cases (300 per class), seed 20260920, local mirror, narrator off.
-`uncertain` is counted as "no fraud action", which is what it means
-operationally.
+600 cases (300 per class), seed 20260920, local mirror, narrator off, every
+window clamped at the moment the case opened. `uncertain` is counted as "no
+fraud action", which is what it means operationally.
 
 ### The headline: graph evidence alone
 
@@ -81,10 +109,10 @@ cleared alerts:
 | true typology | caught | recall | mean p |
 |---|---|---|---|
 | **undocumented** (device ring, structuring) | **9 / 9** | **100%** | 0.94 |
-| card_testing | 0 / 16 | 0% | 0.59 |
+| card_testing | 5 / 16 | 31% | 0.71 |
 
 against **7 false fraud calls on 300** of the hardest negatives — 97.7%
-specificity. AUC 0.870.
+specificity. AUC 0.898.
 
 The agent finds **every instance in the dataset** of the two typologies the
 challenge does not document, from graph structure alone, without a prior and
@@ -94,8 +122,8 @@ without seeing its own case.
 
 | | recall on fraud | specificity | false fraud calls | AUC |
 |---|---|---|---|---|
-| `neutral` | 2.67% (8/300) | 98.3% | 5 | 0.718 |
-| `score` | 0.33% (1/300) | **100%** | **0** | 0.655 |
+| `neutral` | 2.67% (8/300) | 98.3% | 5 | 0.691 |
+| `score` | 0.33% (1/300) | **100%** | **0** | 0.654 |
 | `actual` | 99.3% (298/300) | 100% | 0 | 1.000 |
 
 Read `actual` with the caveat above: it is mostly the trigger prior, and is
@@ -106,10 +134,74 @@ The honest reading of `neutral` is in the typology breakdown:
 | true typology | caught | recall |
 |---|---|---|
 | undocumented | 1/1 | 100% |
-| card_not_present_new_device | 4/60 | 6.7% |
-| card_not_present_fraud | 3/101 | 3.0% |
+| card_not_present_fraud | 4/101 | 4.0% |
+| card_not_present_new_device | 3/60 | 5.0% |
 | account_takeover | 0/73 | 0% |
 | out_of_region_use | 0/64 | 0% |
+
+---
+
+## card_testing: found broken, rebuilt, measured again
+
+The first version of this backtest measured the `card_testing` detector at
+**0 of 16**. Its definition took the README literally — three or more small
+authorisations inside one hour, *then* a larger purchase — and the real runs
+break all three assumptions: probes and purchases **interleave** (test, buy,
+test, buy), probes are **sparse** (one or two at a time, days apart), and runs
+last up to eleven days where the rule looked at ±72 hours.
+
+What does separate these runs is the amount. Online authorisations under $2
+are close to absent from ordinary traffic.
+
+**Thresholds were fixed by a rule stated before recall was looked at:** the
+variant closest to the README's "often under $5" whose firing rate on cleared
+alerts is at most 1%. Selection used the negative class only.
+
+| probe | probes | cleared | other fraud | card testing | |
+|---|---|---|---|---|---|
+| < $5 | ≥ 1 | 2.44% | 7.23% | 15/16 | fails the rule |
+| < $5 | ≥ 2 | 1.33% | 3.79% | 13/16 | fails the rule |
+| < $2 | ≥ 1 | 0.11% | 0.52% | 7/16 | |
+| **< $2** | **≥ 2** | **0.11%** | **0.26%** | **5/16** | **chosen** |
+
+The README's own $5 fails: at that size a probe is an ordinary purchase. At $2
+one probe and two tied on cleared alerts; the tie went to fewer misattributions
+on other fraud — also the lower-recall option, so it was not picked to flatter.
+
+**Result in the replay: 0/16 → 5/16, with no added false positives** on the 300
+hard negatives. Three of the sixteen cases were read by hand while designing
+it; on the **13 never inspected, it catches 3 — 23%**. That is the
+out-of-sample figure, and the one to quote.
+
+### Its weight still measures negative, and why that is not believed
+
+Measured the standard way, the new detector fires on 31 of 4,665 confirmed
+frauds and **39 of 3,400 legitimate cases** — a likelihood ratio of 0.58, below
+1. Taken at face value that says the detector argues for innocence.
+
+It was traced on the agent's own code path rather than accepted:
+
+* all 39 legitimate firings fall on **5 cards**, one of them accounting for 22;
+* **all 5 have a confirmed-fraud case**, and 3 a confirmed card-testing case;
+* the detector fires on **no card without fraud history** — zero;
+* 38 of the 39 are from the "unalerted" base-rate sample: transactions no
+  closed case happened to include, on cards that were being tested.
+
+The negative class is contaminated exactly where this detector looks. So the
+measured ratio is not believed, and the weight stays at its documented floor
+of +1.20 — now with the trace recorded as its basis in
+`analysis/build_model.py`, rather than "too few cases to estimate from".
+
+The same label noise sits under every detector's measurement. It shows up here
+because card testing is so rare in clean traffic that a handful of mislabelled
+transactions dominate the count.
+
+### What it still misses, by design
+
+Card testing done with $2–$5 probes is not separable from ordinary small online
+purchases by amount and timing. Catching it costs false fraud calls on 2.4% of
+legitimate high-score alerts, which this agent's design does not accept. 11 of
+16 remain uncaught.
 
 ---
 
@@ -123,20 +215,19 @@ The honest reading of `neutral` is in the typology breakdown:
   false fraud verdicts on 300 high-scoring legitimate alerts. The project's
   central claim — that a score is a reason to look, not a verdict — is not
   just rhetoric in the write-up; the agent behaves that way under measurement.
-* Case memory is genuinely time-boxed. 0 leakage violations across 1,850
-  replayed investigations.
+* Nothing leaks, of either kind. 0 violations across every replayed
+  investigation, with case memory and transaction windows both checked from
+  the tool ledger rather than trusted.
 
 **Not established, and worth saying plainly.**
 
 * **Most fraud in this history is invisible to the graph.** Single-transaction
   customer disputes have no relational structure to find, and they are the
   bulk of the confirmed frauds. Under a neutral prior the agent reaches
-  "uncertain" on 292 of 300 — it does not pretend, but nor does it help.
-* **The `card_testing` detector does not fire on card-testing cases.** 0 of
-  16. Its weight (+1.20) is a documented floor set because the history had too
-  few cases to estimate from; we now know the detector's definition does not
-  match what these analysts labelled card testing. That is a measured defect,
-  not a tuning choice.
+  "uncertain" on most of them — it does not pretend, but nor does it help.
+* **card_testing recall is 23% out of sample.** Better than zero, and bought
+  without false positives, but most card testing in this history uses probes
+  too large to tell from ordinary purchases.
 * **Nothing here transfers to the 20 exam cases**, whose outcomes are unknown.
 * The bank score's AUC on this sample (0.056) is an artefact of the same
   selection — every cleared case is a high score — and is not a statement

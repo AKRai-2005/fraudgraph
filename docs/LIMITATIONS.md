@@ -36,10 +36,16 @@ It also showed two things up:
 * Most fraud in this history is invisible to a graph. Single-transaction
   customer disputes have no relational structure, they are the bulk of the
   confirmed frauds, and on them the agent reaches "uncertain" and stays there.
-* **The `card_testing` detector fires on none of the 16 card-testing cases.**
-  Its +1.20 weight is a documented floor set because the history had too few
-  cases to fit; we now know the detector's definition does not match what
-  these analysts labelled card testing. A measured defect, not a tuning choice.
+* **The `card_testing` detector fired on none of the 16 card-testing cases.**
+  It was rebuilt — probes and purchases interleave, which the README's literal
+  definition assumed they did not — and now catches 5 of 16 (3 of the 13 never
+  inspected while designing it) with no added false positives. Most card
+  testing here uses $2–$5 probes, which cannot be told apart from ordinary
+  purchases without flagging 2.4% of legitimate alerts. See `BACKTEST.md`.
+* **The base-rate negative class is contaminated, and now we can see where.**
+  The rebuilt detector's measured likelihood ratio is 0.58, because all 39 of
+  its "legitimate" firings sit on five cards that each have a confirmed-fraud
+  case. Every detector's weight is measured against that same class.
 
 ## Things that are not measured
 

@@ -94,61 +94,97 @@ def _near(rows: list[dict], centre: pd.Timestamp, hours: float) -> list[dict]:
 # ---------------------------------------------------------------- detectors
 
 
+#: card_testing, second definition. See detect_card_testing for how these were
+#: chosen; they were fixed by a rule stated before recall was looked at.
+TEST_PROBE_MAX = 2.00       # a "test" authorisation: online, under $2
+TEST_MIN_PROBES = 2
+TEST_USE_MIN = 25.0         # a "use": an online purchase of at least $25 ...
+TEST_USE_WITHIN_H = 48      # ... within 48 hours after some probe
+TEST_WINDOW_DAYS = 14
+
+
 def detect_card_testing(ctx: CaseContext, f: Features) -> tuple[PatternFinding, Episode | None]:
-    """Pattern 1 / policy R5: three or more tiny online authorisations, often
-    under $5, inside an hour, then a larger purchase."""
-    rows = _rows(ctx)
-    centre = pd.Timestamp(ctx.ts)
-    # "three or more tiny online authorizations, often under $5".  An earlier,
-    # looser cut (8% of the card's median, uncapped) fired on 29 legitimate
-    # cases against 15 frauds in the closed history -- a card whose median is
-    # $200 makes three ordinary $16 purchases look like a testing run.  The cut
-    # is now absolute-first and capped, and a larger follow-up purchase is
-    # required rather than optional.
-    small_cut = (
-        min(10.0, max(SMALL_AUTH_ABS, 0.04 * f.hist_median_amt))
-        if f.hist_median_amt else SMALL_AUTH_ABS
+    """Pattern 1 / policy R5: probing a stolen card number with tiny online
+    authorisations before using it.
+
+    **The first definition caught none of the 16 card-testing cases.** It took
+    the README literally -- three or more small authorisations inside one
+    hour, *then* a larger purchase -- and the end-to-end backtest measured it
+    at 0 of 16. Reading the transactions showed why, three ways over:
+
+    * probes and purchases **interleave** (test, buy, test, buy), where the
+      old rule required every probe to precede the purchase;
+    * probes are **sparse** -- one or two at a time, hours or days apart --
+      so three inside an hour almost never happens;
+    * runs span up to eleven days, and the rule looked at +/-72h.
+
+    What does separate them is the amount. Sub-$2 online authorisations are
+    nearly absent from ordinary traffic: 162 of 590,742 transactions, on 18 of
+    14,318 cards.
+
+    The thresholds were chosen by a rule fixed *before* looking at recall:
+    the variant closest to the README's "often under $5" whose firing rate on
+    **cleared** cases is at most 1%. Selection used the negative class only.
+
+    ======  ======  =============  =============  ============
+    probe   probes  cleared FPR    other fraud    card testing
+    ======  ======  =============  =============  ============
+    < $5    >= 1    2.44%  fails   7.23%          15/16
+    < $5    >= 2    1.33%  fails   3.79%          13/16
+    < $2    >= 1    0.11%          0.52%          7/16
+    < $2    >= 2    0.11%          0.26%          5/16   <- chosen
+    ======  ======  =============  =============  ============
+
+    $5 -- the README's own figure -- fails: at that size a "probe" is an
+    ordinary small purchase. At $2 one probe and two gave identical cleared
+    rates (1 of 900); the tie went to fewer misattributions on other fraud,
+    which is also the lower-recall option, so it was not chosen to flatter.
+
+    The honest limit: card testing done with $2-$5 probes is not separable
+    from ordinary small online purchases by amount and timing alone. Catching
+    it would cost false fraud calls on 2.4% of legitimate high-score alerts,
+    which this agent does not accept.
+    """
+    rows = _wide(ctx, TEST_WINDOW_DAYS)
+    online = sorted(
+        (r for r in rows if r.get("channel") == "online"),
+        key=lambda r: pd.Timestamp(r["ts"]),
     )
-    online = [r for r in rows if r.get("channel") == "online"]
-    best: tuple[int, list[dict]] = (0, [])
-    for anchor in online:
-        a_ts = pd.Timestamp(anchor["ts"])
-        group = [
-            r for r in online
-            if 0 <= (pd.Timestamp(r["ts"]) - a_ts).total_seconds() <= 3600
-            and _f(r["TransactionAmt"]) <= small_cut
-        ]
-        if len(group) > best[0]:
-            best = (len(group), group)
-    n_small, small_group = best
-    follow: list[dict] = []
-    if n_small >= 3:
-        last_small = max(pd.Timestamp(r["ts"]) for r in small_group)
-        med_small = sorted(_f(r["TransactionAmt"]) for r in small_group)[n_small // 2]
-        follow = [
-            r for r in online
-            if 0 < (pd.Timestamp(r["ts"]) - last_small).total_seconds() <= 6 * 3600
-            and _f(r["TransactionAmt"]) >= max(25.0, 10.0 * max(med_small, 0.5))
-        ]
-    # the sequence is the signal: small run *followed by* a materially larger
-    # purchase.  A run of small authorisations on its own is ordinary.
-    matched = n_small >= 3 and bool(follow)
+    probes = [r for r in online if _f(r["TransactionAmt"]) < TEST_PROBE_MAX]
+    uses: list[dict] = []
+    for r in online:
+        if _f(r["TransactionAmt"]) < TEST_USE_MIN:
+            continue
+        r_ts = pd.Timestamp(r["ts"])
+        # a use is any sizeable purchase that follows *some* probe -- probes
+        # and purchases interleave, so no ordering of the whole run is assumed
+        if any(0 < (r_ts - pd.Timestamp(p["ts"])).total_seconds() <= TEST_USE_WITHIN_H * 3600
+               for p in probes):
+            uses.append(r)
+    matched = len(probes) >= TEST_MIN_PROBES and bool(uses)
     strength = 0.0
     if matched:
-        strength = min(0.95, 0.74 + 0.05 * (n_small - 3) + 0.06 * min(len(follow), 2))
-    why = (
-        f"{n_small} online authorisations at or below ${small_cut:.2f} within one hour"
-        + (f", followed by {len(follow)} larger purchase(s) within six hours" if follow else "")
-        if matched else
-        f"no run of 3+ small online authorisations within an hour (largest run {n_small})"
-    )
-    ep = _episode(small_group + follow) if matched else None
+        strength = min(0.95, 0.80 + 0.04 * (len(probes) - TEST_MIN_PROBES))
+    if matched:
+        why = (f"{len(probes)} online authorisation(s) under ${TEST_PROBE_MAX:.2f} within "
+               f"{TEST_WINDOW_DAYS} days, each small enough to be a test of the card number, "
+               f"with {len(uses)} purchase(s) of ${TEST_USE_MIN:.0f} or more following within "
+               f"{TEST_USE_WITHIN_H}h")
+    else:
+        why = (f"{len(probes)} online authorisation(s) under ${TEST_PROBE_MAX:.2f} in "
+               f"{TEST_WINDOW_DAYS} days"
+               + ("" if len(probes) < TEST_MIN_PROBES
+                  else f", but no purchase of ${TEST_USE_MIN:.0f}+ followed within "
+                       f"{TEST_USE_WITHIN_H}h"))
+    ep = _episode(probes + uses) if matched else None
     return (
         PatternFinding(
             pattern=Pattern.CARD_TESTING, name="card_testing", matched=matched,
             strength=strength, why=why,
-            limitations="Small online authorisations also occur legitimately "
-                        "(digital top-ups, subscription trials); the sequence is the signal.",
+            limitations=(f"Probes of ${TEST_PROBE_MAX:.0f}-$5 are not separable from ordinary "
+                         "small online purchases, so card testing done with them is missed "
+                         "by design; catching it would flag 2.4% of legitimate high-score "
+                         "alerts."),
             txn_ids=ep.txn_ids if ep else [],
             entity_ids=[f.card_id],
         ),

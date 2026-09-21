@@ -66,10 +66,22 @@ INCULPATORY_DETECTORS = {
 }
 
 DOCUMENTED_FLOORS: dict[str, tuple[float, str]] = {
+    # The measured ratio for card_testing is below 1, and the floor overrides
+    # it. That needs more than an assertion, so it was traced: every one of
+    # the 39 "legitimate" firings is on one of five cards, all five have a
+    # confirmed-fraud case, three have a confirmed card-testing case, and the
+    # detector fires on no card without fraud history at all. The negative
+    # class is contaminated exactly where this detector looks -- unalerted
+    # activity on cards that were being tested -- so the measurement cannot
+    # be taken at face value here. It fires on 1 of 900 cleared alerts.
     "card_testing": (
         1.20,
-        "the closed history holds only 16 card-testing cases, too few to estimate from; the "
-        "dataset README documents the sequence as a fraud typology and policy R5 acts on it",
+        "the measured ratio is dragged below 1 by label noise, traced rather than assumed: all "
+        "39 legitimate firings fall on 5 cards, every one of which has a confirmed-fraud case "
+        "(3 a confirmed card-testing case), and the detector fires on no card without fraud "
+        "history. It fires on 1 of 900 cleared alerts. In the end-to-end replay it catches 5 "
+        "of 16 card-testing cases -- 3 of the 13 never inspected while it was designed -- with "
+        "no added false positives. The README documents the typology and policy R5 acts on it",
     ),
     "sub_threshold_structuring": (
         1.60,
@@ -189,7 +201,10 @@ def main() -> int:
           + ", ".join(f"{k}={v:+.2f}" for k, v in out["trigger_prior"].items()))
     print("\n  detector weights:")
     for b in sorted(out["weight_basis"], key=lambda r: -abs(r["weight"])):
-        flag = "" if b["source"] == "measured" else "  <- documented floor"
+        # print the source as recorded: "measured, floored at zero" is a
+        # measurement clipped at zero, not a documented floor, and the two were
+        # printed identically
+        flag = "" if b["source"] == "measured" else f"  <- {b['source']}"
         print(f"    {b['detector']:28s} {b['weight']:+6.2f}  "
               f"(fraud {b['rate_fraud_pct']:5.2f}% / legit {b['rate_legit_pct']:5.2f}%){flag}")
     print(f"\n  written to {PATHS.build / 'risk_model.json'}")

@@ -191,7 +191,7 @@ With no key the system runs on deterministic templates and reports
   places where fitting the closed cases naively goes badly wrong
 * [`docs/BACKTEST.md`](docs/BACKTEST.md) — the agent replayed over closed
   cases with known outcomes: 9 of 9 relational frauds caught from graph
-  evidence alone, zero false fraud calls on 300 hard negatives, and the two
-  weaknesses it exposed
+  evidence alone, zero false fraud calls on 300 hard negatives, a detector it
+  found broken and how that was rebuilt, and a number it had to withdraw
 * [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — what this does not do
 * [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — deliverable checklist

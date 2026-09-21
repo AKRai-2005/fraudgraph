@@ -50,27 +50,116 @@ def ctx_from(rows, flagged, profile=None, **kw):
 
 
 # ------------------------------------------------------------ card testing
-def test_card_testing_fires_on_small_run_then_purchase():
-    """SYNTHETIC: three sub-$3 online authorisations then a $259 purchase."""
+def test_card_testing_fires_on_probes_then_purchase():
+    """SYNTHETIC: two sub-$2 online probes, then a $259 purchase.
+
+    A $2.40 authorisation used to count as a probe. Under the second
+    definition it is an ordinary small purchase: at that size the detector
+    fired on 2.4% of legitimate high-score alerts.
+    """
     rows = [
         txn(1, "2016-12-01 09:12:00", 1.10),
-        txn(2, "2016-12-01 09:31:00", 2.40),
+        txn(2, "2016-12-01 09:31:00", 2.40),     # not a probe any more
         txn(3, "2016-12-01 09:52:00", 0.95),
         txn(4, "2016-12-01 10:31:00", 259.98),
     ]
     ctx = ctx_from(rows, rows[3])
-    f = F.compute(ctx)
-    finding, ep = P.detect_card_testing(ctx, f)
+    finding, ep = P.detect_card_testing(ctx, F.compute(ctx))
     assert finding.matched and finding.strength >= 0.8
-    assert ep is not None and len(ep.txn_ids) == 4
-    assert ep.exposure == pytest.approx(264.43, abs=0.01)
+    assert ep is not None and ep.txn_ids == ["1", "3", "4"]
+    assert ep.exposure == pytest.approx(262.03, abs=0.01)
 
 
-def test_card_testing_does_not_fire_on_two_small_auths():
-    rows = [txn(1, "2016-12-01 09:12:00", 1.10), txn(2, "2016-12-01 09:31:00", 2.40)]
+def test_card_testing_fires_when_probes_and_purchases_interleave():
+    """SYNTHETIC. The first definition's fatal assumption.
+
+    It required every probe to come *before* the purchase. Real runs go
+    probe, buy, probe, buy -- so it measured 0 of 16 on the closed history.
+    """
+    rows = [
+        txn(1, "2016-12-01 19:45:00", 0.40),
+        txn(2, "2016-12-01 19:55:00", 135.49),
+        txn(3, "2016-12-01 19:57:00", 0.50),
+        txn(4, "2016-12-01 20:00:00", 135.46),
+        txn(5, "2016-12-01 20:32:00", 0.41),
+    ]
+    ctx = ctx_from(rows, rows[0])
+    finding, _ = P.detect_card_testing(ctx, F.compute(ctx))
+    assert finding.matched
+
+
+def test_card_testing_fires_on_sparse_probes_days_apart():
+    """SYNTHETIC. Probes an hour-long window would never group together."""
+    rows = [
+        txn(1, "2016-12-01 20:01:00", 0.46),
+        txn(2, "2016-12-03 18:17:00", 0.28),
+        txn(3, "2016-12-04 06:00:00", 64.61),
+    ]
+    ctx = ctx_from(rows, rows[0])
+    finding, _ = P.detect_card_testing(ctx, F.compute(ctx))
+    assert finding.matched
+
+
+def test_card_testing_ignores_three_to_five_dollar_authorisations():
+    """SYNTHETIC. The README says "often under $5"; that threshold was measured
+    and rejected, because at $3-$4 a 'probe' is an everyday online purchase."""
+    rows = [
+        txn(1, "2016-12-01 09:12:00", 3.99),
+        txn(2, "2016-12-01 09:31:00", 4.49),
+        txn(3, "2016-12-01 09:52:00", 3.50),
+        txn(4, "2016-12-01 10:31:00", 259.98),
+    ]
+    ctx = ctx_from(rows, rows[3])
+    finding, _ = P.detect_card_testing(ctx, F.compute(ctx))
+    assert not finding.matched
+
+
+def test_card_testing_does_not_fire_on_a_single_probe():
+    rows = [txn(1, "2016-12-01 09:12:00", 0.53), txn(2, "2016-12-01 10:03:00", 170.78)]
     ctx = ctx_from(rows, rows[1])
     finding, ep = P.detect_card_testing(ctx, F.compute(ctx))
     assert not finding.matched and ep is None
+
+
+def test_card_testing_needs_a_purchase_after_the_probes():
+    """Probes alone are not a use of the card."""
+    rows = [txn(1, "2016-12-01 09:12:00", 0.40), txn(2, "2016-12-01 09:31:00", 0.50)]
+    ctx = ctx_from(rows, rows[1])
+    finding, ep = P.detect_card_testing(ctx, F.compute(ctx))
+    assert not finding.matched and ep is None
+
+
+def test_card_testing_does_not_count_a_purchase_made_before_any_probe():
+    rows = [
+        txn(1, "2016-12-01 08:00:00", 259.98),
+        txn(2, "2016-12-01 09:12:00", 0.40),
+        txn(3, "2016-12-01 09:31:00", 0.50),
+    ]
+    ctx = ctx_from(rows, rows[2])
+    finding, _ = P.detect_card_testing(ctx, F.compute(ctx))
+    assert not finding.matched
+
+
+def test_card_testing_ignores_a_purchase_long_after_the_probes():
+    rows = [
+        txn(1, "2016-12-01 09:12:00", 0.40),
+        txn(2, "2016-12-01 09:31:00", 0.50),
+        txn(3, "2016-12-06 10:00:00", 259.98),    # five days later
+    ]
+    ctx = ctx_from(rows, rows[1])
+    finding, _ = P.detect_card_testing(ctx, F.compute(ctx))
+    assert not finding.matched
+
+
+def test_card_testing_ignores_in_person_small_amounts():
+    rows = [
+        txn(1, "2016-12-01 09:12:00", 0.40, channel="in_person"),
+        txn(2, "2016-12-01 09:31:00", 0.50, channel="in_person"),
+        txn(3, "2016-12-01 10:00:00", 259.98),
+    ]
+    ctx = ctx_from(rows, rows[2])
+    finding, _ = P.detect_card_testing(ctx, F.compute(ctx))
+    assert not finding.matched
 
 
 def test_card_testing_ignores_small_auths_spread_over_days():
