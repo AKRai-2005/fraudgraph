@@ -97,3 +97,11 @@ Figures are tabular everywhere.
 * Behaviour: 29 interaction checks in the browser — navigation, filters, sort,
   every route into a case, approve and reject, both re-run paths including the
   live stream, ad-hoc investigation, graph, theme — with no console errors.
+
+Layout and behaviour are automated in `tests/test_frontend.py` (`python -m
+pytest -m browser`); contrast was computed once. The file holds the 29 checks
+as one test each, the layout sweep at all eight widths, and a check that
+"Actions simulated" is never cut off. Any uncaught exception or console error fails the
+test it happened in. The tests were checked against deliberate breakage — no
+approver name, a one-way sort, wall-clock latency in the live panel, an
+unsaved theme, an element wider than the page — and each was caught.

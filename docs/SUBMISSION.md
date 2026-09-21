@@ -64,6 +64,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Integration tests | done | `python -m pytest tests/test_integration.py` |
 | Scenario tests | done | `python -m pytest tests/test_scenarios.py` |
 | Failure-mode tests | done | `python -m pytest tests/test_failures.py` |
+| Console, in a real browser | done | `python -m pytest -m browser` |
 | All 20 benchmark cases processed | done | `python -m fraudgraph.benchmark.run` |
 | Output files validated | done | `python -m fraudgraph.benchmark.validate` |
 | Measured results documented | done | `docs/RISK_MODEL.md`, `build/risk_model.json` |

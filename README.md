@@ -102,11 +102,18 @@ with the time it really took.
 Run the tests:
 
 ```bash
-python -m pytest -q                       # 223 tests
+python -m pytest -q                       # 275 tests
+python -m pytest -q -m browser            # the 39 that drive the console in Chromium
 python scripts/compare_backends.py local local      # determinism
 python scripts/compare_backends.py local tigergraph # cross-backend agreement
 python -m fraudgraph.analysis.backtest --all-modes  # are the verdicts right?
 ```
+
+`tests/test_frontend.py` starts the console on a free port and drives it in
+headless Chromium: every tab, filter, sort and route into a case, approve and
+reject, the live stream, the graph, the theme, and no sideways scrolling at
+eight widths from 320 to 1920px. It needs `pip install playwright` and
+`python -m playwright install chromium`, and skips itself without them.
 
 The last one is the important one, and it needs a running workspace. The
 three backends are meant to be interchangeable; checking only the verdicts
