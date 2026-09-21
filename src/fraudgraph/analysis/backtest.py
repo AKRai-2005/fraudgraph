@@ -96,6 +96,24 @@ class CaseResult:
 
 
 # --------------------------------------------------------------- the replay
+class ReplayMemory(CaseMemory):
+    """Case memory that reads like the real thing and never writes.
+
+    A replay is a measurement, not an investigation, so nothing it concludes
+    may become memory. The first version of this backtest used the ordinary
+    CaseMemory, whose write_case persists every closed investigation: against
+    the local mirror that only appended 11,689 replayed closed cases to the
+    agent's journal -- which the console then listed as "cases this system
+    closed", 850 of them -- and against TigerGraph it would have written each
+    replay into the graph as an AgentCase, where the next live investigation
+    would have retrieved it as precedent.
+    """
+
+    def write_case(self, answer) -> dict:  # noqa: D401 - same contract as CaseMemory
+        return {"written": False, "graph_case_id": "", "backend": self.store.backend_name,
+                "detail": {"reason": "backtest replay: never persisted"}}
+
+
 def _trigger_for(row, trigger_mode: str) -> Trigger | None:
     """Build the alert as it would have arrived, without leaking the outcome.
 
@@ -215,7 +233,7 @@ def replay(
     store = GraphStore(prefer=backend)
     # narrator=None on purpose: the LLM writes prose, which no metric here
     # reads, and a free-tier quota would cap the sample size at 20.
-    agent = InvestigationAgent(store=store, memory=CaseMemory(store), narrator=None)
+    agent = InvestigationAgent(store=store, memory=ReplayMemory(store), narrator=None)
 
     results: list[CaseResult] = []
     t0 = time.perf_counter()

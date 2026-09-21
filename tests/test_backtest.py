@@ -301,3 +301,35 @@ def test_the_trigger_clamps_forward_windows_only_when_replaying():
 def test_a_clamp_never_goes_negative_for_an_alert_after_opening():
     t = _trigger_for(_Row(opened_at="2016-08-01 00:00:00"), "neutral")
     assert t.cap_hours_after("2016-08-02 00:00:00", 72) == 0.0
+
+
+# ---------------------------------------------------------- nothing persists
+@pytest.mark.skipif(not HAVE_CACHE, reason="parquet cache not built")
+def test_a_replay_never_writes_to_the_graph_or_the_journal(tmp_path, monkeypatch):
+    """A replay is a measurement. Nothing it concludes may become memory.
+
+    The first backtest used the ordinary CaseMemory and appended 11,689
+    replayed closed cases to the agent journal, which the console listed as
+    cases the agent had closed. Against TigerGraph it would have written each
+    one into the graph.
+    """
+    import dataclasses
+
+    import fraudgraph.memory.case_memory as cm
+    from fraudgraph.analysis.backtest import replay
+    from fraudgraph.graph.store import GraphStore
+
+    monkeypatch.setattr(cm, "PATHS", dataclasses.replace(cm.PATHS, build=tmp_path))
+    writes = []
+    real_call = GraphStore.call
+
+    def spy(self, name, **params):
+        if name == "write_case":
+            writes.append(params)
+        return real_call(self, name, **params)
+
+    monkeypatch.setattr(GraphStore, "call", spy)
+    res = replay(n_per_class=2, backend="local", trigger_mode="neutral", progress=False)
+    assert res["n_scored"] >= 1
+    assert writes == [], "a replayed case reached write_case"
+    assert not (tmp_path / "agent_cases.jsonl").exists(), "a replayed case reached the journal"
