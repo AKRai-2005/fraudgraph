@@ -644,6 +644,44 @@ class CaseService:
             "cases_on_disk": len(list(self.records_dir.glob("*.json"))),
         }
 
+    def backtest(self) -> dict:
+        """The end-to-end replay, if one has been run.
+
+        This is the only measurement of whether the agent's *verdicts* are
+        right, as opposed to whether its parts behave. It is read from disk
+        rather than computed here: it takes minutes, and a dashboard that
+        silently recomputed it would be quoting a different sample each load.
+        """
+        p = PATHS.build / "backtest.json"
+        if not p.exists():
+            return {"ran": False,
+                    "how": "python -m fraudgraph.analysis.backtest --all-modes"}
+        try:
+            blob = json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {"ran": False, "error": "backtest.json is not readable"}
+        runs = {k: v for k, v in blob.items() if k != "generated_at"}
+        return {
+            "ran": bool(runs),
+            "generated_at": blob.get("generated_at"),
+            "runs": {
+                key: {
+                    "trigger_mode": r.get("trigger_mode"),
+                    "patterns": r.get("patterns") or [],
+                    "n_scored": r.get("n_scored"),
+                    "class_counts": r.get("class_counts"),
+                    "confusion": r.get("confusion"),
+                    "uncertain_as_negative": r.get("uncertain_as_negative"),
+                    "decided_only": r.get("decided_only"),
+                    "recall_by_true_pattern": r.get("recall_by_true_pattern"),
+                    "auc": r.get("auc"),
+                    "leakage_violations": r.get("leakage_violations"),
+                    "caveats": r.get("caveats"),
+                }
+                for key, r in runs.items()
+            },
+        }
+
     def model_card(self) -> dict:
         p = PATHS.build / "risk_model.json"
         blob = json.loads(p.read_text()) if p.exists() else {}
@@ -666,6 +704,7 @@ class CaseService:
             "metrics": blob.get("metrics") or blob.get("logistic_fit_metrics"),
             "logistic_fit_metrics": blob.get("logistic_fit_metrics"),
             "class_counts": blob.get("class_counts"),
+            "backtest": self.backtest(),
             "notes": {
                 "dispute": blob.get("note"),
                 "bank_score": blob.get("bank_score_note"),

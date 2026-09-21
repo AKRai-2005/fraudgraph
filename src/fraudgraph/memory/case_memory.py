@@ -27,13 +27,25 @@ class CaseMemory:
         self.store = store
 
     # ---------------------------------------------------------- retrieval
-    def retrieve_similar(self, ctx, feats, findings, limit: int = 6) -> list[dict]:
-        """Closed cases worth putting in front of the analyst, with reasons."""
+    def retrieve_similar(self, ctx, feats, findings, limit: int = 6,
+                         as_of: str = "", exclude_case_ids: tuple[str, ...] = ()) -> list[dict]:
+        """Closed cases worth putting in front of the analyst, with reasons.
+
+        ``as_of`` and ``exclude_case_ids`` are empty on the live path and set
+        by the backtest, which replays historical alerts and must not let a
+        case retrieve investigations that closed after it -- least of all
+        itself.  The filter is applied here as well as in the query, because
+        ``ctx.prior_cases_*`` were fetched by the caller and a second guard
+        costs nothing next to a silently leaked label.
+        """
+        blocked = set(exclude_case_ids)
         out: dict[str, dict] = {}
 
         def take(case: dict, why: str, score: float) -> None:
             cid = case.get("case_id")
-            if not cid:
+            if not cid or cid in blocked:
+                return
+            if as_of and str(case.get("closed_at") or "") >= str(as_of):
                 return
             if cid in out:
                 if why not in out[cid]["why_retrieved"]:
@@ -69,6 +81,8 @@ class CaseMemory:
                 "similar_closed_cases",
                 pattern=best.pattern.value, channel=feats.channel,
                 amount=feats.amount, n_txns=max(1, feats.n_txns_48h), limit=limit,
+                **({"as_of": as_of} if as_of else {}),
+                **({"exclude_case_ids": tuple(exclude_case_ids)} if exclude_case_ids else {}),
             )
             for c in (res or {}).get("cases", []) or []:
                 take(c, f"same typology ({best.pattern.value}) and comparable exposure", 0.5)

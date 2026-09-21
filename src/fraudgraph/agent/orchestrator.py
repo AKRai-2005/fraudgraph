@@ -46,6 +46,22 @@ class Trigger:
     customer_id: str
     opened_at: str = ""
     risk_score: float | None = None
+    #: Case memory is restricted to investigations already closed at this
+    #: moment. Empty (the live path) means "everything on disk is in the past",
+    #: which is true for the exam: the history ends 2016-11-06 and the pack
+    #: starts 2016-11-22. The backtest replays *historical* alerts, where it is
+    #: emphatically not true -- without this a case can retrieve investigations
+    #: that closed months later, including itself.
+    as_of: str = ""
+    #: Cases the agent must not retrieve, whatever their date. The backtest
+    #: puts the case under test here: `as_of` alone does not exclude it,
+    #: because a case is open before it is closed but its row already exists.
+    exclude_case_ids: tuple[str, ...] = ()
+
+    @property
+    def memory_window(self) -> dict:
+        """Kwargs every case-memory query takes, so none is missed."""
+        return {"as_of": self.as_of} if self.as_of else {}
 
     @classmethod
     def from_case_pack_row(cls, row) -> "Trigger":
@@ -153,7 +169,10 @@ class InvestigationAgent:
                probability=risk.agent_fraud_probability, confidence=risk.confidence)
 
         # ---- memory ----
-        similar = self.memory.retrieve_similar(ctx, feats, st.findings)
+        similar = self.memory.retrieve_similar(
+            ctx, feats, st.findings,
+            as_of=trigger.as_of, exclude_case_ids=trigger.exclude_case_ids,
+        )
         st.log("tool", f"case memory returned {len(similar)} comparable closed investigations",
                case_ids=[c["case_id"] for c in similar])
 
@@ -269,6 +288,7 @@ class InvestigationAgent:
         """Only ask the graph what this particular alert makes relevant."""
         ctx = st.ctx
         t, ts = ctx.txn, ctx.ts
+        window = st.trigger.memory_window   # {} live, {"as_of": ...} in backtest
         plan: list[str] = []
 
         if t.get("addr1") is not None:
@@ -302,13 +322,16 @@ class InvestigationAgent:
                 plan.append("device neighbours (device new to this card or proxied)")
                 if int(ctx.device_ring.get("n_cards") or 0) >= P.RING_MIN_CARDS:
                     ctx.prior_cases_device = self.store.call(
-                        "closed_cases_for_device", device_profile=t["device_profile"]
+                        "closed_cases_for_device", device_profile=t["device_profile"],
+                        **window,
                     )
                     plan.append("closed cases on the shared device")
 
-        ctx.prior_cases_card = self.store.call("closed_cases_for_card", card_id=ctx.card_id)
+        ctx.prior_cases_card = self.store.call(
+            "closed_cases_for_card", card_id=ctx.card_id, **window
+        )
         ctx.prior_cases_customer = self.store.call(
-            "closed_cases_for_customer", customer_id=ctx.customer_id
+            "closed_cases_for_customer", customer_id=ctx.customer_id, **window
         )
         ctx.customer_cards = self.store.call("customer_cards", customer_id=ctx.customer_id)
         plan += ["prior cases on card", "prior cases on customer", "customer's other cards"]

@@ -493,3 +493,15 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .lf.s { grid-template-columns: 70px minmax(0, 1fr); }
   .live-feed { max-height: 260px; }
 }
+
+/* ------------------------------------------------------ backtest panel */
+.bt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; }
+.bt-run { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 12px; }
+.bt-head { font-size: 12.5px; margin-bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.bt-run .facts { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); margin: 0 0 10px; }
+.bt-run .fact { background: var(--panel); }
+.bt-table { font-size: 11.5px; margin-top: 4px; }
+.bt-table th, .bt-table td { padding: 4px 6px; white-space: nowrap; }
+.bt-table th { position: static; background: none; cursor: default; }
+.bt-caveats { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-dim); line-height: 1.55; }
+.bt-caveats li { margin-bottom: 5px; }

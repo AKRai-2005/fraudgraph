@@ -102,9 +102,10 @@ with the time it really took.
 Run the tests:
 
 ```bash
-python -m pytest -q                       # 197 tests
+python -m pytest -q                       # 223 tests
 python scripts/compare_backends.py local local      # determinism
 python scripts/compare_backends.py local tigergraph # cross-backend agreement
+python -m fraudgraph.analysis.backtest --all-modes  # are the verdicts right?
 ```
 
 The last one is the important one, and it needs a running workspace. The
@@ -188,5 +189,9 @@ With no key the system runs on deterministic templates and reports
 * [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — components and the flow
 * [`docs/RISK_MODEL.md`](docs/RISK_MODEL.md) — the model card, and the two
   places where fitting the closed cases naively goes badly wrong
+* [`docs/BACKTEST.md`](docs/BACKTEST.md) — the agent replayed over closed
+  cases with known outcomes: 9 of 9 relational frauds caught from graph
+  evidence alone, zero false fraud calls on 300 hard negatives, and the two
+  weaknesses it exposed
 * [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — what this does not do
 * [`docs/SUBMISSION.md`](docs/SUBMISSION.md) — deliverable checklist

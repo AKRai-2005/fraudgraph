@@ -7,7 +7,7 @@ const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const pct = (n) => (Number(n || 0) * 100).toFixed(0) + '%';
+const pct = (n) => (n == null ? '—' : (Number(n) * 100).toFixed(n < 0.1 ? 2 : 1) + '%');
 
 const state = { queue: [], current: null, graph: null, sort: { key: 'fraud_probability', dir: -1 } };
 
@@ -822,6 +822,75 @@ function drawGraph(g) {
   });
 }
 
+/* ================================================== end-to-end backtest
+ * The only measurement of whether the agent's verdicts are RIGHT, as opposed
+ * to whether its parts behave. Read from build/backtest.json; the dashboard
+ * never recomputes it, because it takes minutes and a silently different
+ * sample on every page load would not be a measurement.
+ */
+const BT_ORDER = ['neutral', 'neutral:undocumented+card_testing', 'score', 'actual'];
+
+function backtestPanel(bt) {
+  if (!bt || !bt.ran) {
+    return `<div class="panel"><h2>End-to-end backtest</h2>
+      <p class="panel-hint">Not run. The agent's parts are measured; its verdicts are not.</p>
+      <pre class="json">${esc((bt && bt.how) || 'python -m fraudgraph.analysis.backtest --all-modes')}</pre></div>`;
+  }
+  const runs = bt.runs || {};
+  const keys = BT_ORDER.filter((k) => runs[k]).concat(
+    Object.keys(runs).filter((k) => !BT_ORDER.includes(k)));
+  const headline = runs['neutral:undocumented+card_testing'] || runs.neutral;
+  const leaks = keys.reduce((n, k) => n + (runs[k].leakage_violations || 0), 0);
+
+  const card = (k) => {
+    const r = runs[k];
+    const d = r.uncertain_as_negative || {};
+    const pats = (r.patterns || []).length ? ` &middot; ${esc(r.patterns.join(' + '))} only` : '';
+    const bp = r.recall_by_true_pattern || {};
+    const rows = Object.entries(bp).map(([pat, v]) =>
+      `<tr><td>${esc(pat)}</td><td class="num">${v.called_fraud}/${v.n}</td>
+       <td class="num" style="color:${v.recall >= 0.5 ? 'var(--legit)' : 'var(--text-dim)'}">${pct(v.recall)}</td>
+       <td class="num">${Number(v.mean_probability).toFixed(2)}</td></tr>`).join('');
+    return `<div class="bt-run">
+      <div class="bt-head"><b>${esc(r.trigger_mode)}</b>${pats}
+        <span class="muted">n=${r.n_scored}</span></div>
+      <div class="facts">
+        ${fact('Recall on fraud', pct(d.recall_on_fraud), d.recall_on_fraud >= 0.5 ? 'var(--legit)' : 'var(--uncertain)')}
+        ${fact('Specificity', pct(d.specificity_on_cleared), 'var(--legit)')}
+        ${fact('False fraud calls', d.fp == null ? '&mdash;' : d.fp, d.fp ? 'var(--uncertain)' : 'var(--legit)')}
+        ${fact('AUC', (r.auc && r.auc.agent_probability) != null ? Number(r.auc.agent_probability).toFixed(3) : '&mdash;')}
+      </div>
+      ${rows ? `<table class="bt-table"><thead><tr><th>true typology</th><th class="num">caught</th>
+        <th class="num">recall</th><th class="num">mean p</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+    </div>`;
+  };
+
+  return `<div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>End-to-end backtest</h2>
+        <p class="panel-hint">Closed investigations replayed through the whole agent,
+          with case memory time-boxed to each alert and the case itself excluded.
+          The outcomes are real; the verdicts are the agent's.</p>
+      </div>
+      <span class="pill ${leaks ? 'bad' : 'ok'}">${leaks ? leaks + ' leakage violation(s)' : 'no leakage'}</span>
+    </div>
+    ${headline ? `<div class="okbox"><b>Headline.</b> Under a neutral prior &mdash; every case
+      arriving as an analyst request, so nothing is on either scale and only graph
+      evidence can move the answer &mdash; the agent called
+      <b>${pct(((headline.recall_by_true_pattern || {}).undocumented || {}).recall)}</b>
+      of the relational-fraud cases, against
+      <b>${(headline.uncertain_as_negative || {}).fp}</b> false fraud calls on
+      ${(headline.class_counts || {}).cleared} of the hardest negatives in the dataset.</div>` : ''}
+    <div class="bt-grid">${keys.map(card).join('')}</div>
+    <details><summary>What these numbers do not mean (${(headline && headline.caveats || []).length})</summary>
+      <ul class="bt-caveats">${(headline && headline.caveats || []).map((c) => `<li>${esc(c)}</li>`).join('')}</ul>
+    </details>
+    <p class="panel-hint" style="margin-top:8px">Generated ${esc(String(bt.generated_at || '').slice(0, 19).replace('T', ' '))}
+      &middot; <span class="mono">python -m fraudgraph.analysis.backtest --all-modes</span></p>
+  </div>`;
+}
+
 /* ============================================================== memory */
 async function loadMemory() {
   const el = $('#memoryBody');
@@ -889,6 +958,7 @@ async function loadModel() {
     const ws = Object.entries(m.weights || {}).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
     const maxW = Math.max(1e-6, ...ws.map(([, v]) => Math.abs(v)));
     el.innerHTML = `
+      ${backtestPanel(m.backtest)}
       <div class="panel">
         <h2>Risk model card</h2>
         <p class="panel-hint">${esc(m.method || m.source)}. Fraud probability is the trigger's

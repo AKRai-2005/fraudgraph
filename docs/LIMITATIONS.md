@@ -21,12 +21,33 @@ The agent may execute only `auto` actions, and even those hit the mock service.
 * Detector firing rates on confirmed fraud vs legitimate activity: same file.
 * Ingestion integrity: `build/ingest_quality_report.json`.
 
+## The agent's verdicts, measured end to end
+
+`docs/BACKTEST.md`. The agent is replayed over closed investigations with real
+outcomes, with case memory time-boxed to each alert and the case itself
+excluded, and its verdicts scored. Under a **neutral prior** — nothing on
+either scale, so only graph evidence can move the answer — it called **9 of 9**
+of the dataset's relational-fraud cases, against 7 false fraud calls on 300 of
+the hardest negatives. Under the exam's operating point it produced **zero**
+false fraud verdicts on those 300.
+
+It also showed two things up:
+
+* Most fraud in this history is invisible to a graph. Single-transaction
+  customer disputes have no relational structure, they are the bulk of the
+  confirmed frauds, and on them the agent reaches "uncertain" and stays there.
+* **The `card_testing` detector fires on none of the 16 card-testing cases.**
+  Its +1.20 weight is a documented floor set because the history had too few
+  cases to fit; we now know the detector's definition does not match what
+  these analysts labelled card testing. A measured defect, not a tuning choice.
+
 ## Things that are not measured
 
 **Accuracy against the challenge's answer key.** We do not have it. Nothing in
 this repository estimates a score against it, and no accuracy figure for the 20
-exam cases appears anywhere — that would be fabrication. The measured numbers
-above are against the *closed cases*, which is a different and easier problem.
+exam cases appears anywhere — that would be fabrication. The backtest above is
+against the *closed cases*, which is a different problem: see its own caveats,
+which are printed with every number it produces.
 
 ## Known weaknesses in the modelling
 
