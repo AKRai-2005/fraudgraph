@@ -231,6 +231,10 @@ def test_duplicate_approval_is_idempotent_in_effect(tmp_path, monkeypatch):
     from fraudgraph.policy.actions import MockActionService
     from fraudgraph.schemas import Action as A
 
+    # tmp_path and monkeypatch were requested here and never used, so every run
+    # appended two DUP-1 executions to the live audit log
+    monkeypatch.setattr(MockActionService, "log_path",
+                        property(lambda self: tmp_path / "action_audit_log.jsonl"))
     svc = MockActionService()
     a = svc.perform(A.MONITOR_CARD, case_id="DUP-1")
     b = svc.perform(A.MONITOR_CARD, case_id="DUP-1")

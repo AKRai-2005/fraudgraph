@@ -38,7 +38,12 @@ def test_only_auto_actions_are_agent_executable():
         assert not R.may_agent_execute(a)
 
 
-def test_mock_service_refuses_unapproved_human_action():
+def test_mock_service_refuses_unapproved_human_action(tmp_path, monkeypatch):
+    # The service appends to an audit log. Pointed at the real build/ one, this
+    # test left a fake BLOCK_CARD on case TEST-1 in the live audit trail on
+    # every run -- 48 of them before anyone noticed.
+    monkeypatch.setattr(MockActionService, "log_path",
+                        property(lambda self: tmp_path / "action_audit_log.jsonl"))
     svc = MockActionService()
     with pytest.raises(PermissionError):
         svc.perform(Action.BLOCK_CARD)
