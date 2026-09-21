@@ -3,83 +3,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light dark">
 <meta name="description" content="Graph-grounded agentic fraud investigation on TigerGraph (IEEE-CIS / HHGOA).">
-<title>Fraud Investigation Console</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234d8dff'/%3E%3Ccircle cx='10' cy='11' r='3' fill='%23fff'/%3E%3Ccircle cx='22' cy='10' r='2.4' fill='%23fff' opacity='.75'/%3E%3Ccircle cx='16' cy='23' r='3.4' fill='%23e5484d'/%3E%3Cpath d='M10 11 L16 23 L22 10' stroke='%23fff' stroke-width='1.6' fill='none' opacity='.8'/%3E%3C/svg%3E">
+<title>fraudgraph · Investigation console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%231b1a17'/%3E%3Cpath d='M9 10 L16 23 L24 9' stroke='%23f6f4ee' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='9' cy='10' r='3' fill='%23f6f4ee'/%3E%3Ccircle cx='24' cy='9' r='2.5' fill='%23f6f4ee'/%3E%3Ccircle cx='16' cy='23' r='3.6' fill='%23e0604f'/%3E%3C/svg%3E">
+<script>
+  // Theme before first paint, so a saved choice never flashes the other one.
+  try { var t = localStorage.getItem('fg-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
-<header class="topbar">
-  <div class="brand">
-    <span class="mark"></span>
-    <div>
-      <h1>Fraud Investigation Console</h1>
-      <p class="sub">Graph-grounded agentic investigation &middot; IEEE-CIS / HHGOA</p>
-    </div>
-  </div>
-  <div class="status-strip" id="statusStrip"></div>
-</header>
 
-<nav class="tabs" id="tabs" role="tablist" aria-label="Console sections">
-  <button data-view="overview" class="active" role="tab" aria-selected="true" aria-controls="view-overview">Overview</button>
-  <button data-view="queue" role="tab" aria-selected="false" aria-controls="view-queue">Investigation queue</button>
-  <button data-view="case" role="tab" aria-selected="false" aria-controls="view-case">Case workspace</button>
-  <button data-view="memory" role="tab" aria-selected="false" aria-controls="view-memory">Case memory</button>
-  <button data-view="model" role="tab" aria-selected="false" aria-controls="view-model">Model &amp; policy</button>
-</nav>
+<header class="app-header">
+  <div class="brand">
+    <!-- the graph glyph: two known entities and the flagged one they lead to.
+         It replaces a gradient square that meant nothing. -->
+    <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5.5 6.5 L12 17.5 L18.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="5.5" cy="6.5" r="2.6" fill="var(--paper)" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="18.5" cy="5.5" r="2.2" fill="var(--paper)" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="12" cy="17.5" r="3.2" fill="var(--fraud)"/>
+    </svg>
+    <span class="brand-name">fraudgraph</span>
+    <span class="brand-desc">Investigation console</span>
+  </div>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Console sections">
+    <button id="tab-overview" data-view="overview" class="active" role="tab" aria-selected="true" aria-controls="view-overview">Overview</button>
+    <button id="tab-queue" data-view="queue" role="tab" aria-selected="false" aria-controls="view-queue">Queue</button>
+    <button id="tab-case" data-view="case" role="tab" aria-selected="false" aria-controls="view-case">Case</button>
+    <button id="tab-memory" data-view="memory" role="tab" aria-selected="false" aria-controls="view-memory">Memory</button>
+    <button id="tab-model" data-view="model" role="tab" aria-selected="false" aria-controls="view-model">Model &amp; policy</button>
+  </nav>
+
+  <div class="status" id="statusStrip" role="status" aria-live="polite">
+    <span class="st"><span class="dot"></span>Connecting&hellip;</span>
+  </div>
+
+  <button class="icon-btn" id="themeToggle" type="button" aria-label="Switch theme">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 2 a6 6 0 0 1 0 12 z" fill="currentColor"/></svg>
+  </button>
+</header>
 
 <main id="main">
   <!-- ============================ OVERVIEW ============================ -->
-  <section id="view-overview" class="view active">
-    <section class="panel hero" aria-labelledby="divergenceTitle">
-      <div class="panel-head">
-        <div>
-          <h2 id="divergenceTitle">Where the graph disagrees with the score</h2>
-          <p class="panel-hint">Every alert arrives with a risk score. The agent
-            investigates it against the graph and reaches its own probability.
-            When the two differ, the evidence is the reason &mdash; click any point
-            to read it.</p>
-        </div>
-        <div class="hero-stats" id="divergenceStats"><div class="sk sk-stat"></div><div class="sk sk-stat"></div><div class="sk sk-stat"></div></div>
-      </div>
-      <div class="chart-wrap">
-        <svg id="divergenceChart" role="img"
-             aria-labelledby="divergenceTitle" aria-describedby="divergenceDesc"></svg>
+  <section id="view-overview" class="view active" role="tabpanel" aria-labelledby="tab-overview">
+    <header class="view-head">
+      <p class="view-kicker">Overview</p>
+      <h1 class="view-title" id="divergenceTitle">Where the graph disagrees with the score</h1>
+      <p class="view-lede" id="divergenceStats"><span class="sk sk-line"></span><span class="sk sk-line short"></span></p>
+    </header>
+
+    <div class="finding">
+      <figure class="chart-frame">
+        <svg id="divergenceChart" role="img" aria-labelledby="divergenceTitle" aria-describedby="divergenceDesc"></svg>
         <p id="divergenceDesc" class="sr-only"></p>
-        <div class="chart-tip" id="divergenceTip" role="status" aria-live="polite"></div>
-      </div>
-      <div id="divergenceCallouts" class="callouts"></div>
+        <div class="tip" id="divergenceTip" role="status" aria-live="polite"></div>
+        <figcaption class="chart-key">
+          <span><i class="fraud"></i>fraud</span>
+          <span><i class="uncertain"></i>uncertain</span>
+          <span><i class="legit"></i>legitimate</span>
+          <span><i class="band"></i>score and agent agree</span>
+          <span>Each point is an alert. Select one to open its case.</span>
+        </figcaption>
+      </figure>
+      <aside class="margin-notes" id="divergenceCallouts" aria-label="The two largest disagreements"></aside>
+    </div>
+
+    <section class="sec">
+      <div class="sec-head"><h2>The case pack</h2><span class="sec-meta" id="packMeta"></span></div>
+      <dl class="ledger" id="kpis">
+        <div><dt><span class="sk sk-line short"></span></dt><dd><span class="sk sk-num"></span></dd></div>
+        <div><dt><span class="sk sk-line short"></span></dt><dd><span class="sk sk-num"></span></dd></div>
+        <div><dt><span class="sk sk-line short"></span></dt><dd><span class="sk sk-num"></span></dd></div>
+        <div><dt><span class="sk sk-line short"></span></dt><dd><span class="sk sk-num"></span></dd></div>
+      </dl>
     </section>
 
-    <div class="kpi-grid" id="kpis"><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div><div class="kpi skeleton"><div class="sk sk-v"></div><div class="sk sk-l"></div></div></div>
-    <div class="two-col">
-      <div class="panel">
-        <h2>Assessed fraud probability</h2>
-        <p class="panel-hint">Distribution across investigated alerts. The agent's own
-          assessment, not the bank model's score.</p>
-        <div id="riskDist" class="dist"><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div><div class="sk sk-row"></div></div>
-      </div>
-      <div class="panel">
-        <h2>Verdicts and patterns</h2>
-        <div class="split" id="verdictSplit"></div>
-      </div>
+    <div class="grid-2">
+      <section class="sec">
+        <div class="sec-head"><h2>Assessed probability</h2></div>
+        <p class="sec-note">The agent's own assessment after investigating, not the bank's score.</p>
+        <div id="riskDist" class="dist"><span class="sk sk-line"></span><span class="sk sk-line"></span><span class="sk sk-line"></span></div>
+      </section>
+      <section class="sec">
+        <div class="sec-head"><h2>Patterns identified</h2></div>
+        <div id="verdictSplit"></div>
+      </section>
     </div>
-    <div class="panel">
-      <h2>Recent agent activity</h2>
-      <p class="panel-hint">Live audit trail across all investigations, newest first.</p>
-      <div id="recentActivity" class="activity"></div>
-    </div>
+
+    <section class="sec">
+      <div class="sec-head"><h2>Agent activity</h2><span class="sec-meta">every step, newest first</span></div>
+      <div id="recentActivity" class="log scroll"></div>
+    </section>
   </section>
 
   <!-- ============================= QUEUE ============================== -->
-  <section id="view-queue" class="view">
-    <div class="panel">
-      <div class="panel-head">
-        <h2>Investigation queue</h2>
+  <section id="view-queue" class="view" role="tabpanel" aria-labelledby="tab-queue">
+    <header class="view-head">
+      <p class="view-kicker">Queue</p>
+      <h1 class="view-title">Investigation queue</h1>
+      <p class="view-lede">Every alert in the case pack, ranked by the agent's assessed probability.
+        Open a row to read the evidence behind it.</p>
+    </header>
+
+    <section class="sec">
+      <div class="sec-head">
         <div class="controls">
-          <input id="queueSearch" type="search" placeholder="Filter by case, card, customer&hellip;">
+          <label for="queueSearch" class="sr-only">Filter</label>
+          <input id="queueSearch" type="search" placeholder="Filter by case, card, customer&hellip;" autocomplete="off">
+          <label for="queueStatus" class="sr-only">Status</label>
           <select id="queueStatus">
             <option value="">All statuses</option>
             <option value="closed_fraud">Closed &ndash; fraud</option>
@@ -87,89 +122,103 @@
             <option value="escalated">Escalated</option>
             <option value="open">Open</option>
           </select>
+          <label for="queueVerdict" class="sr-only">Verdict</label>
           <select id="queueVerdict">
             <option value="">All verdicts</option>
             <option value="fraud">Fraud</option>
             <option value="legitimate">Legitimate</option>
             <option value="uncertain">Uncertain</option>
           </select>
-          <label class="chk"><input type="checkbox" id="queueApproval"> Awaiting approval</label>
+          <label class="check"><input type="checkbox" id="queueApproval"> Awaiting approval</label>
         </div>
+        <span class="sec-meta" id="queueCount" aria-live="polite"></span>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap stack-sm sheet">
         <table id="queueTable">
           <thead><tr>
-            <th data-sort="case_id">Case</th>
-            <th data-sort="trigger_type">Trigger</th>
-            <th data-sort="card_id">Card</th>
-            <th data-sort="bank_risk_score">Bank score</th>
-            <th data-sort="fraud_probability">Agent p(fraud)</th>
-            <th data-sort="confidence">Confidence</th>
-            <th data-sort="verdict">Verdict</th>
-            <th data-sort="pattern">Pattern</th>
-            <th data-sort="exposure_usd">Exposure</th>
-            <th data-sort="next_action">Next best action</th>
-            <th>Approval</th>
-            <th data-sort="last_updated">Updated</th>
+            <th data-sort="case_id" scope="col">Case</th>
+            <th data-sort="trigger_type" scope="col">Trigger</th>
+            <th data-sort="card_id" scope="col">Card</th>
+            <th data-sort="bank_risk_score" scope="col" class="num">Bank score</th>
+            <th data-sort="fraud_probability" scope="col" class="num">Agent p(fraud)</th>
+            <th data-sort="confidence" scope="col" class="num opt">Confidence</th>
+            <th data-sort="verdict" scope="col">Verdict</th>
+            <th data-sort="pattern" scope="col">Pattern</th>
+            <th data-sort="exposure_usd" scope="col" class="num">Exposure</th>
+            <th data-sort="next_action" scope="col">Next action</th>
+            <th scope="col">Approval</th>
+            <th data-sort="last_updated" scope="col" class="opt">Updated</th>
           </tr></thead>
           <tbody></tbody>
         </table>
       </div>
-      <div class="panel-foot">
-        <div class="adhoc">
-          <label>Open an investigation on any transaction</label>
-          <input id="adhocTxn" placeholder="TransactionID, e.g. 3478561">
-          <button id="adhocBtn" class="btn">Investigate</button>
-          <span id="adhocMsg" class="muted"></span>
-        </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2>Investigate any transaction</h2></div>
+      <p class="sec-note">Opens a new investigation on a transaction outside the case pack. It joins the
+        queue tagged <span class="tag">ad hoc</span> and is kept out of the case-pack figures.</p>
+      <div class="field">
+        <label for="adhocTxn">Transaction ID</label>
+        <input id="adhocTxn" inputmode="numeric" placeholder="e.g. 3478561" autocomplete="off">
+        <button id="adhocBtn" class="btn primary" type="button">Investigate</button>
+        <span id="adhocMsg" class="muted" role="status" aria-live="polite"></span>
       </div>
-    </div>
+    </section>
   </section>
 
   <!-- =========================== WORKSPACE ============================ -->
-  <section id="view-case" class="view">
-    <div class="case-picker">
-      <select id="casePicker" aria-label="Case to open"></select>
-      <button id="watchBtn" class="btn">&#9654;&nbsp; Watch it investigate</button>
-      <button id="rerunBtn" class="btn ghost">Re-run quietly</button>
+  <section id="view-case" class="view" role="tabpanel" aria-labelledby="tab-case">
+    <div class="toolbar">
+      <label for="casePicker" class="sr-only">Case</label>
+      <select id="casePicker"></select>
+      <button id="watchBtn" class="btn primary" type="button"><span class="glyph" aria-hidden="true"></span>Watch it investigate</button>
+      <button id="rerunBtn" class="btn" type="button" title="Re-run the investigation and show only the result">Re-run without streaming</button>
       <span id="caseMsg" class="muted" role="status" aria-live="polite"></span>
     </div>
 
-    <section id="livePanel" class="panel live" hidden aria-label="Live investigation">
-      <div class="panel-head">
-        <div>
-          <h2>Investigating <span id="liveCase" class="mono"></span>
-            <span id="liveState" class="tag">running</span></h2>
-          <p class="panel-hint">Every line below is emitted as it happens &mdash; the
-            agent's own reasoning steps, and each graph query with the time it
-            really took. Nothing is replayed from the answer file.</p>
-        </div>
+    <section id="livePanel" class="live" hidden aria-label="Live investigation">
+      <div class="live-head">
+        <h2>Investigating <span id="liveCase" class="mono"></span> <span id="liveState" class="tag running">running</span></h2>
         <div class="live-counters">
           <span><b id="liveSteps">0</b> steps</span>
           <span><b id="liveQueries">0</b> graph calls</span>
           <span><b id="liveMs">0</b> ms in the graph</span>
-          <span class="muted" id="liveBackend"></span>
+          <span id="liveBackend"></span>
         </div>
       </div>
+      <p class="sec-note">Each line is emitted as it happens: the agent's reasoning steps, and every graph
+        query with the time it really took. Nothing is replayed from the answer file.</p>
       <div id="liveFeed" class="live-feed"></div>
     </section>
-    <div id="caseBody" class="case-body">
-      <div class="empty">Select a case from the queue.</div>
-    </div>
+
+    <div id="caseBody"><div class="empty">Select a case from the queue.</div></div>
   </section>
 
   <!-- ============================= MEMORY ============================= -->
-  <section id="view-memory" class="view">
+  <section id="view-memory" class="view" role="tabpanel" aria-labelledby="tab-memory">
+    <header class="view-head">
+      <p class="view-kicker">Memory</p>
+      <h1 class="view-title">Case memory</h1>
+      <p class="view-lede">What the agent can recall: the investigations shipped with the dataset, and the
+        cases it has closed itself. Memory is context for a new alert, never its verdict.</p>
+    </header>
     <div id="memoryBody"></div>
   </section>
 
   <!-- ========================== MODEL/POLICY ========================== -->
-  <section id="view-model" class="view">
+  <section id="view-model" class="view" role="tabpanel" aria-labelledby="tab-model">
+    <header class="view-head">
+      <p class="view-kicker">Model &amp; policy</p>
+      <h1 class="view-title">How a verdict is reached</h1>
+      <p class="view-lede">How the probability is built, how it holds up against closed cases with known
+        outcomes, and the rules that decide what the agent may do on its own.</p>
+    </header>
     <div id="modelBody"></div>
   </section>
 </main>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="/static/app.js"></script>
 </body>
 </html>
