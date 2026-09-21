@@ -98,7 +98,7 @@
       "CC-1018",
       "CC-2356"
     ],
-    "summary": "Transaction 3526826 on card C07671-K2 for $35.66, occurring online on 2016-12-09 02:39:29 under product code C, was scored 0.76 by the bank's model and assessed as fraud with a probability of 0.71 under the account_takeover pattern. The established behaviour shows online purchases account for 1% to 1.5% of the 1,431 prior transactions, and this purchase involved a new device never seen among the 13 previously recorded devices. Case memory retrieved closed cases CC-1475, CC-3216, CC-3761, and CC-4294 matching prior investigations on this card. The total exposure is $35.66, and the recommended action is CREATE_CASE (auto).",
+    "summary": "Transaction 3526826 on card C07671-K2 for $35.66, occurring online on 2016-12-09 02:39:29 under product code C, was scored 0.76 by the bank's model and assessed as fraud with a probability of 0.71. The activity matches an account takeover pattern involving an online purchase from a new device profile not previously seen among the 13 historical devices, with online channels representing only 1% to 1.5% of the card's history. Historical case memory shows prior investigations on this exact card, including confirmed fraud cases CC-1475, CC-3216, and CC-4294, as well as cleared case CC-3761. The recommended action is CREATE_CASE (auto) with a total exposure of $35.66.",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-013"
   },
@@ -130,6 +130,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 12,
-  "tokens": 1079,
-  "latency_s": 3.57
+  "tokens": 1083,
+  "latency_s": 3.66
 }

@@ -80,7 +80,7 @@
       "CC-1450",
       "CC-1699"
     ],
-    "summary": "Flagged transaction 3491361 on card C02354-K2 for $39.08 occurred in-person under product code W on 2016-11-27 13:41:26, and was scored 0.48 by the bank's model. The transaction amount of $39.08 is at or below the card's 95th-percentile amount of $445.09, in-person accounts for 92% of this card's history, product code W accounts for 92% of its history, and there are 565 prior transactions in billing region 126. Case memory includes closed cases CC-0255, CC-0405, CC-0454, and CC-0631 on this exact card. The pattern is identified as account_takeover, resulting in a fraud verdict with a probability of 0.80 and an exposure of $39.08. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
+    "summary": "Transaction 3491361 on card C02354-K2 (customer C02354) for $39.08 on 2016-11-27 13:41:26 was assessed as fraud with a probability of 0.80 under the account_takeover pattern, resulting in an exposure of $39.08. The transaction occurred in-person under product code W, which is consistent with the card's history where in_person and product code W each account for 92% of transactions, and the amount is at or below the 95th-percentile amount of $445.09 out of 5860 established transactions, alongside 565 prior transactions in billing region 126. Case memory includes closed cases CC-0255, CC-0405, CC-0454, and CC-0631 matching prior investigations on this card. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-018"
   },
@@ -122,6 +122,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 1115,
-  "latency_s": 3.3
+  "tokens": 1104,
+  "latency_s": 3.04
 }

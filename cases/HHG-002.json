@@ -86,7 +86,7 @@
       "CC-2805",
       "CC-3666"
     ],
-    "summary": "Transaction 3478782 on card C11891-K1 for $292.36 online on 2016-11-22 17:27:07 was scored 0.79 by the bank's model and exceeds the card's historical maximum of $121.32. Case memory retrieved closed cases CC-4160, CC-1845, CC-1955, and CC-2681 matching on typology and comparable exposure. The verdict is uncertain with a probability of 0.37 and an exposure of $0.00, driven by missing identity and device records that prevented device and proxy tests. The recommended action is to CREATE_CASE (auto).",
+    "summary": "Transaction 3478782 on card C11891-K1 for $292.36 online on 2016-11-22 17:27:07 was scored 0.79 by the bank's model and exceeds the card's historical maximum of $121.32. Case memory retrieved closed cases CC-4160, CC-1845, CC-1955, and CC-2681. The verdict is uncertain with a probability of 0.37 and pattern none, resulting in an exposure of $0.00 due to unrun device and proxy tests. The recommended action is CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-002"
   },
@@ -118,6 +118,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 9,
-  "tokens": 964,
-  "latency_s": 2.48
+  "tokens": 956,
+  "latency_s": 2.84
 }

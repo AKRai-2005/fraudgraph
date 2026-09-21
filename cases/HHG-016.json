@@ -82,7 +82,7 @@
       "CC-2732",
       "CC-2765"
     ],
-    "summary": "Transaction 3534820 on card C09988-K1 (customer C09988) for $59.67, occurring online on 2016-12-11 22:39:08 under product code C, was scored 0.37 by the bank's model. Although the amount and online channel are consistent with the card's history, the transaction matches closed confirmed fraud cases (CC-0497, CC-2540, CC-2675, CC-2694) sharing the same device profile 'Windows | unknown | edge 16.0 | unknown'. The verdict is fraud with a probability of 0.73, a pattern of card_not_present_new_device, and an exposure of $59.67. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
+    "summary": "Transaction 3534820 on card C09988-K1 for $59.67 occurred online on 2016-12-11 22:39:08 and scored 0.37 by the bank's model. While the amount and channel are consistent with the card's history, the transaction shares the device profile 'Windows | unknown | edge 16.0 | unknown' with confirmed fraud cases CC-0497, CC-2540, CC-2675, and CC-2694. This transaction is assessed as fraud with a probability of 0.73 and an exposure of $59.67 under the pattern card_not_present_new_device. Recommended actions are BLOCK_CARD (L1) and CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-016"
   },
@@ -124,6 +124,6 @@
   },
   "stop_reason": "A verification response settled the question, so further evidence gathering would not change the decision (policy 6).",
   "tool_calls": 11,
-  "tokens": 1116,
-  "latency_s": 2.84
+  "tokens": 1098,
+  "latency_s": 2.9
 }

@@ -88,7 +88,7 @@
       "CC-3549",
       "CC-3691"
     ],
-    "summary": "Transaction 3506725 on card C10434-K1 for $1,000.03 occurred online on 2016-12-02 15:18:27 under product code R and was scored 0.90 by the bank's model. This purchase came from a new device profile never seen on this card, which previously had 11 known devices, and exceeded the card's historical maximum of $670.04. Case memory shows matches with closed cases CC-0873, CC-1034, CC-2720, and CC-3219. The verdict is uncertain with a probability of 0.43, a pattern of none, and an exposure of $0.00, with the recommended action to CREATE_CASE (auto).",
+    "summary": "Transaction 3506725 on card C10434-K1 for $1,000.03 occurred online on 2016-12-02 15:18:27 under product code R and scored 0.90 by the bank's model. The online purchase used a new device profile never seen on this card (11 devices previously seen) and exceeded the card's historical maximum of $670.04 (established across 33 transactions where the median was $68.98, the 95th percentile was $669.99, and online transactions accounted for 48%). Case memory identified four matching closed cases (CC-0873, CC-1034, CC-2720, and CC-3219) based on prior investigations on this exact card or the same device profile. The verdict is uncertain with a probability of 0.43, pattern none, and exposure $0.00. The recommended action is CREATE_CASE (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-010"
   },
@@ -120,6 +120,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 13,
-  "tokens": 1069,
-  "latency_s": 3.56
+  "tokens": 1116,
+  "latency_s": 3.93
 }

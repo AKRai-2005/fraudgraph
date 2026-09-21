@@ -171,7 +171,7 @@
       "CC-3841",
       "CC-4086"
     ],
-    "summary": "Transaction 3478561 on card C13487-K1 for $74.96 online on 2016-11-22 16:11:00 is assessed as fraud with a probability of 0.98 and an exposure of $439.61, despite a model score of 0.05. The transaction exhibits an undocumented pattern linked to a device profile shared by 28 unrelated cards within 30 days, consistently behind IP_PROXY:ANONYMOUS, and matches four closed confirmed-fraud cases (CC-2649, CC-2971, CC-2985, CC-3035). Recommended actions are BLOCK_CARD (L1), MONITOR_CARD (auto), MONITOR_CONNECTED_CARDS (auto), CREATE_CASE (auto), FILE_REPORT (L2), and ESCALATE_TO_ANALYST (auto).",
+    "summary": "Analyst request on card C13487-K1: $74.96 online on 2016-11-22, scored 0.05 by the bank's model. The device profile is shared by 28 unrelated cards within 30 days, marked new for 100% of transactions, and consistently behind IP_PROXY:ANONYMOUS, while online accounts for 2.8% of this card's history. Activity occurred on both channels within 48 hours with 2 identity anomalies (new device=False, device marked New=True, match flag=match_status:2, proxy=IP_PROXY:ANONYMOUS, new email domain=False), alongside matching closed cases CC-2649, CC-2971, CC-2985, and CC-3035. Assessed as fraud at probability 0.98 with an exposure of $439.61. Recommended actions: BLOCK_CARD (L1), MONITOR_CARD (auto), MONITOR_CONNECTED_CARDS (auto), CREATE_CASE (auto), FILE_REPORT (L2), ESCALATE_TO_ANALYST (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-014"
   },
@@ -246,7 +246,7 @@
   "sar": {
     "file": true,
     "reason": "3a: fraud is strongly suspected (probability 0.98) and the activity connects to a shared device profile spanning 28 cards; the pattern is coordinated and fits no documented typology (R9)",
-    "narrative": "Customer C13487, holder of card C13487-K1, was subject to a flagged online transaction on 2016-11-22 16:11:00 for the amount of $74.96 under product code C, which yielded a fraud probability verdict of 0.98 with an undocumented pattern and total exposure of $439.61. The activity is suspicious because online transactions account for only 3% of the card's established behavior of 71 prior transactions, diverging from the cardholder's baseline where the median amount is $55.92 and the maximum is $225.94. The transaction originated from the device profile 'SM-G935F Build/NRD90M | Android 7.0 | chrome 62.0 for android | 1920x1080' behind IP_PROXY:ANONYMOUS, which is shared by 28 unrelated cards within 30 days and marked New for 100% of the transactions it ever appears on. This shared origin matches four confirmed-fraud closed cases, specifically CC-2649, CC-2971, CC-2985, and CC-3035, which also featured the same device profile, undocumented pattern, and comparable exposure. Account takeover indicators are present through activity on both channels within 48 hours involving identity anomalies including a new device flag. Although the bank's model scored the flagged transaction only 0.05, the suspicion is established through the graph analysis and relationship evidence rather than the model score. Recommended actions for this case include BLOCK_CARD, MONITOR_CARD, MONITOR_CONNECTED_CARDS, CREATE_CASE, FILE_REPORT, and ESCALATE_TO_ANALYST. Any customer response was simulated.",
+    "narrative": "Customer C13487, holder of card C13487-K1, was subject to a flagged online transaction on 2016-11-22 16:11:00 for the amount of $74.96 under product code C. This activity was determined to be fraud with a probability of 0.98, an undocumented pattern, and a total exposure of $439.61. The suspicion arises because the transaction originated from a device profile shared by 28 unrelated cards within 30 days, marked new for 100% of the transactions it ever appears on, and consistently behind IP_PROXY:ANONYMOUS. This contrasts with the card's established behavior of 71 prior transactions where online accounts for only 3% of activity, despite the bank's model scoring the transaction at 0.05. Further evidence of coordination is established through matching closed cases CC-2649, CC-2971, CC-2985, and CC-3035 which share the same device profile and undocumented typology. Recommended actions for this incident include BLOCK_CARD, MONITOR_CARD, MONITOR_CONNECTED_CARDS, CREATE_CASE, FILE_REPORT, and ESCALATE_TO_ANALYST. Any customer response was simulated.",
     "subjects": [
       "C01289-K1",
       "C01996-K2",
@@ -270,6 +270,6 @@
   },
   "stop_reason": "Fraud probability 0.98 is at or above 0.85 with 3 independent pieces of evidence (policy 6).",
   "tool_calls": 13,
-  "tokens": 3380,
-  "latency_s": 3.47
+  "tokens": 3321,
+  "latency_s": 3.08
 }

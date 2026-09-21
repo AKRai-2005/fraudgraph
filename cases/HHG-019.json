@@ -86,7 +86,7 @@
       "CC-0730",
       "CC-1913"
     ],
-    "summary": "Transaction 3503878 on card C07987-K2 for $99.92, made online on 2016-12-01 17:28:53, was scored 0.90 by the bank's model and involves a device profile never seen on this card among 25 previously seen devices. The transaction is consistent with the card's history, as $99.92 is at or below the 95th-percentile amount of $554.04, online transactions account for 26% of history, product code R accounts for 6%, and there are 5 prior transactions in billing region 264. Case memory shows four closed cases (CC-2011, CC-2087, CC-2860, and CC-5026) matching this alert on the card. The verdict is legitimate with a fraud probability of 0.23, pattern none, and $0.00 exposure, with the recommended action to ESCALATE_TO_ANALYST (auto).",
+    "summary": "Transaction 3503878 on card C07987-K2 for $99.92 online on 2016-12-01 17:28:53 was scored 0.90 by the bank's model and involves a device profile never seen before on this card. The transaction amount, channel, billing region, and product code are consistent with the established history of card C07987 (customer C07987), which includes prior closed cases CC-2011, CC-2087, CC-2860, and CC-5026. The verdict is legitimate with a probability of 0.23, a pattern of none, and an exposure of $0.00. The recommended action is ESCALATE_TO_ANALYST (auto).",
     "written_to_graph": true,
     "graph_case_id": "CASE-2016-019"
   },
@@ -118,6 +118,6 @@
   },
   "stop_reason": "The last step returned no evidence that changed the assessment, so further steps are unlikely to change the decision (policy 6).",
   "tool_calls": 12,
-  "tokens": 1105,
-  "latency_s": 3.47
+  "tokens": 1050,
+  "latency_s": 3.25
 }
