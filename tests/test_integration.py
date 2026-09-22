@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 import pandas as pd
 import pytest
@@ -108,7 +109,42 @@ def test_as_of_filter_hides_later_cases(store):
 
 def test_query_refs_are_wellformed():
     r = spec("card_window").ref(card_id="C00001-K1", center_ts="2016-12-01 00:00:00")
-    assert r.startswith("query:card_window(") and "card_id=C00001-K1" in r
+    assert r == "query:card_window(card_id=C00001-K1, center_ts=2016-12-01 00:00:00)"
+
+
+def test_a_payload_argument_is_named_not_printed():
+    """write_case's ref used to carry a 7,000-character repr of the whole case
+    into the tool log and the live feed."""
+    case = {"graph_case_id": "CASE-2016-014", "evidence": [{"claim": "x" * 5000}]}
+    assert spec("write_case").ref(case=case) == "query:write_case(case=CASE-2016-014)"
+    assert spec("write_case").ref(case={"a": 1, "b": 2}) == "query:write_case(case=<2 fields>)"
+
+
+def test_every_ref_the_answer_files_cite_is_reproduced_exactly():
+    """Brief payloads must not alter a single ref already published: each one
+    is rebuilt from its own arguments and must come out byte-identical."""
+    import re
+    refs = set()
+
+    def walk(x):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k == "ref" and isinstance(v, str) and v.startswith("query:"):
+                    refs.add(v)
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    for f in PATHS.cases_out.glob("*.json"):
+        walk(json.loads(f.read_text(encoding="utf-8")))
+    assert refs, "no query refs found in cases/"
+    for ref in refs:
+        name, inner = re.fullmatch(r"query:(\w+)\((.*)\)", ref).groups()
+        # values may contain ", " (device profiles do), so split on ", key="
+        keys = spec(name).params + spec(name).optional_params
+        parts = re.split(r", (?=(?:%s)=)" % "|".join(keys), inner) if inner else []
+        kwargs = dict(p.split("=", 1) for p in parts)
+        assert spec(name).ref(**kwargs) == ref
 
 
 def test_unknown_query_is_recorded_not_raised(store):
@@ -160,6 +196,49 @@ def test_shared_device_ring_case_is_recognised(agent, pack):
     assert Action.FILE_REPORT in acts
     # the bank model scored this transaction near zero; the graph carried it
     assert ans.risk.bank_risk_score < 0.2
+
+
+class _SlowNarrator:
+    """Takes a known time and a known number of tokens, and writes nothing,
+    so the deterministic text stands and only the timing is under test."""
+    enabled = True
+    DELAY_S = 0.4
+
+    def __init__(self):
+        self.tokens_used = 0
+
+    def plan_extra_queries(self, *args, **kwargs):
+        return []              # proposes nothing, so only the narration is timed
+
+    def _slow(self, *args, **kwargs) -> str:
+        time.sleep(self.DELAY_S)
+        self.tokens_used += 100
+        return ""
+
+    rewrite_summary = rewrite_sar = _slow
+
+
+def test_latency_includes_the_narration(pack):
+    """latency_s used to be taken before the LLM wrote anything: a live run
+    that waited 30s on the free tier reported 0.19s."""
+    row = pack[pack.case_id == "HHG-014"].iloc[0].to_dict()      # files a SAR: two calls
+
+    def run(narrator):
+        agent = InvestigationAgent(store=GraphStore(backend=get_local_backend()), narrator=narrator)
+        return agent.investigate(Trigger.from_case_pack_row(row))
+
+    # a first run is slow on its own (cold caches), so compare against a warm
+    # run of the same case without narration rather than an absolute time
+    run(None)                                   # warm-up, discarded
+    plain, ans = run(None), run(_SlowNarrator())
+    assert ans.tokens == 200
+    assert ans.latency_s - plain.latency_s >= 0.75 * 2 * _SlowNarrator.DELAY_S
+    details = [t.detail for t in ans.timeline]
+    before = [i for i, d in enumerate(details) if d.startswith("the LLM is writing")]
+    after = [i for i, d in enumerate(details) if d.startswith("narration written by the LLM")]
+    assert len(before) == 1 and len(after) == 1, "the wait must be announced, then accounted for"
+    assert before[0] < after[0] and "200 tokens" in details[after[0]]
+    assert plain.timeline and not any("LLM" in d for d in (t.detail for t in plain.timeline))
 
 
 def test_structuring_case_is_recognised(agent, pack):

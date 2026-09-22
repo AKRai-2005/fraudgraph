@@ -757,6 +757,12 @@ class InvestigationAgent:
         # narrative last, so it can only describe what was already decided
         from .narrative import write_summary, write_sar_narrative
 
+        if getattr(self.narrator, "enabled", False):
+            # On the free tier this wait has run from 7s to over 40s, and a feed
+            # that goes quiet after "stop" looks hung.
+            st.log("tool", "the LLM is writing the summary and SAR narrative; "
+                           "the verdict and evidence above are final and it cannot change them")
+        t_narrate = time.perf_counter()
         case.summary = write_summary(answer, feats, risk, self.narrator)
         if sar.file:
             # Populate the structured fields first: the narrative quotes the
@@ -771,6 +777,9 @@ class InvestigationAgent:
             sar.narrative = write_sar_narrative(answer, feats, risk, shared, self.narrator)
         if self.narrator is not None:
             answer.tokens = max(0, getattr(self.narrator, "tokens_used", 0) - tokens_at_start)
+        if answer.tokens:
+            st.log("tool", f"narration written by the LLM in {time.perf_counter() - t_narrate:.2f}s "
+                           f"({answer.tokens:,} tokens); the verdict was fixed before it began")
 
         # Persist to case memory. written_to_graph is set from what the graph
         # actually accepted -- never assumed.
@@ -785,6 +794,10 @@ class InvestigationAgent:
         answer.tool_calls = self.store.call_count
         answer.timeline = st.timeline
         answer.tool_log = list(self.store.ledger)
+        # Measured last. It used to be taken before the narration and the case
+        # write, so a run that spent 30s waiting on the free-tier LLM reported
+        # 0.19s. Both are part of producing the answer.
+        answer.latency_s = round(time.perf_counter() - t0, 2)
         return answer
 
     @staticmethod

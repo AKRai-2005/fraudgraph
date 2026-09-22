@@ -186,6 +186,19 @@ Three things follow, all visible rather than hidden:
 The verdicts, probabilities, patterns, actions, routes and SAR decisions never
 come from the LLM, so a quota exhaustion changes only the prose.
 
+It is also the slow part, and unpredictably so. On 2026-09-22 the same case
+(HHG-014) was investigated live six times on the local mirror. The graph work
+took 0.2–0.35s every time; in the four runs where the narration was timed, its
+two calls took 6.9s, 20s, 42s and 58s. The live feed
+now says when the LLM starts and how long it took, and `latency_s` covers the
+narration and the case write.
+
+**The 20 published answer files understate `latency_s`.** Until that date it
+was measured before the narration and the case write, so their 2.7–3.9s are
+the graph investigation over TigerGraph alone. The figures will be corrected
+when the files are next regenerated on a running workspace
+(`python -m fraudgraph.benchmark.run`). Nothing else in the files is affected.
+
 ## Engineering limitations
 
 * The local mirror holds the transaction index in memory (~590k rows). It is a
