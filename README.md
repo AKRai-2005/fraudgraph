@@ -102,8 +102,8 @@ with the time it really took.
 Run the tests:
 
 ```bash
-python -m pytest -q                       # 305 tests
-python -m pytest -q -m browser            # the 43 that drive the console in Chromium
+python -m pytest -q                       # 310 tests
+python -m pytest -q -m browser            # the 45 that drive the console in Chromium
 python scripts/compare_backends.py local local      # determinism
 python scripts/compare_backends.py local tigergraph # cross-backend agreement
 python -m fraudgraph.analysis.backtest --all-modes  # are the verdicts right?
@@ -158,8 +158,8 @@ Then `FG_GRAPH_BACKEND=tigergraph` makes it the system of record, or
 `FG_GRAPH_BACKEND=mcp` routes the same queries through the official
 `tigergraph-mcp` server instead (`pip install tigergraph-mcp`). Both have been
 run over the full case pack and give identical answers. The console's
-status strip always shows which backend answered, and the answer files record
-it per evidence item.
+status strip always shows which backend answered, and the case records in
+`build/case_records/` record it for every graph call.
 
 ## Connecting the LLM
 

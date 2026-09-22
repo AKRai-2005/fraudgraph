@@ -28,7 +28,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Recommendations change when evidence changes | done | `tests/test_scenarios.py::test_scenario_recommendation_changes_when_the_customer_denies` and `..._reverses_when_the_customer_confirms` |
 | Stopping conditions work | done | `tests/test_scenarios.py::test_scenario_stopping_rules` |
 | Decisions explained and recorded | done | timeline + tool ledger persisted per case in `build/case_records/` |
-| LLM integrated for reasoning and narrative | done | Gemini `gemini-flash-lite-latest`; 22 calls, 24,912 tokens across the 20 cases, 0 rate-limited |
+| LLM integrated for reasoning and narrative | done | Gemini `gemini-flash-lite-latest`; 24,726 tokens across the 20 published answer files, every one narrated (870–3,321 tokens each) |
 | TigerGraph MCP integration | done | all 20 cases run end to end through `tigergraph-mcp` (69 tools): `--backend mcp` gives the same 10 fraud / 7 legitimate / 3 uncertain and 216 graph calls as the direct backend, and writes all 20 cases back |
 
 ## Policy and cases
@@ -82,8 +82,9 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | SARs where policy requires | done |
 | Next-best action before and after evidence | done |
 | 3–5 minute demo video | **to do** — script in `docs/DEMO.md` |
-| Technical blog post | **to do** — outline in `docs/BLOG_OUTLINE.md` |
-| Social post tagging @TigerGraphDB | **to do** — draft in `docs/BLOG_OUTLINE.md` |
+| Project report | **in progress** — to be set in the Canva format |
+| Technical blog post | **to do** — not started |
+| Social post tagging @TigerGraphDB | **to do** — not started |
 
 ## Note on TigerGraph MCP
 

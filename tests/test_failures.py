@@ -262,6 +262,12 @@ def test_interrupted_investigation_leaves_no_partial_answer_file(tmp_path):
         runmod.build_agent = orig
     assert summary["cases_written"] == 0
     assert summary["errors"] and summary["errors"][0]["case_id"] == "HHG-001"
+    # and none of it reached the real summary or the answer files
+    assert runmod.PATHS.build != PATHS.build and runmod.PATHS.cases_out != PATHS.cases_out
+    assert (runmod.PATHS.build / "benchmark_summary.json").exists()
+    if (PATHS.build / "benchmark_summary.json").exists():
+        real = json.loads((PATHS.build / "benchmark_summary.json").read_text(encoding="utf-8"))
+        assert real.get("errors") != summary["errors"], "the test wrote the real summary"
 
 
 # --------------------------------------------------- backend resolution

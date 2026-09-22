@@ -34,8 +34,14 @@ def _redirect(mp, root, records, journal_dir, approvals, audit):
     from fraudgraph.api.service import CaseService
     from fraudgraph.policy.actions import MockActionService
 
-    for mod in (service_mod, run_mod):
-        mp.setattr(mod, "PATHS", dataclasses.replace(mod.PATHS, records=records))
+    mp.setattr(service_mod, "PATHS", dataclasses.replace(service_mod.PATHS, records=records))
+    # The benchmark runner also writes the answer files and its summary. A test
+    # of a crashing run rewrote build/benchmark_summary.json on every suite run,
+    # and a run that did not crash would have rewritten cases/ -- the deliverable.
+    (root / "build").mkdir(exist_ok=True)
+    (root / "cases").mkdir(exist_ok=True)
+    mp.setattr(run_mod, "PATHS", dataclasses.replace(
+        run_mod.PATHS, records=records, build=root / "build", cases_out=root / "cases"))
     # the journal is the only thing case_memory keeps under build/
     mp.setattr(memory_mod, "PATHS", dataclasses.replace(memory_mod.PATHS, build=journal_dir))
     mp.setattr(CaseService, "approvals_path", property(lambda self: approvals))
