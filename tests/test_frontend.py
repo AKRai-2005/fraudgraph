@@ -561,6 +561,23 @@ def test_simulated_actions_are_always_visible(layout_page, width):
     assert box["x"] >= strip["x"] - 1 and box["x"] + box["width"] <= strip["x"] + strip["width"] + 1
 
 
+@pytest.mark.parametrize("width", [1024, 1440])
+def test_the_header_stays_on_screen_while_a_case_scrolls(layout_page, width):
+    """Above 960px the header is sticky, and with it the status line. It once
+    scrolled away: overflow-x: hidden on html and body made body a scroll
+    container that never scrolls, so the header stuck to nothing. (At 960 and
+    below it is deliberately static: three rows would eat a phone screen.)"""
+    c = layout_page
+    c.page.set_viewport_size({"width": width, "height": 800})
+    c.open_case("HHG-014")
+    c.page.evaluate("window.scrollTo(0, 1500)")
+    assert c.page.evaluate("scrollY") > 1000, "the case is too short to test scrolling"
+    header = c.page.locator(".app-header").bounding_box()
+    assert abs(header["y"]) < 1, f"the header is at y={header['y']} after scrolling"
+    expect(c.page.locator("#statusStrip .st").first).to_be_in_viewport()
+    c.page.evaluate("window.scrollTo(0, 0)")
+
+
 # --------------------------------------------------- contrast, as rendered
 # test_design_tokens.py proves every text token clears AA on every surface
 # token. This measures what the page actually draws: each visible run of text

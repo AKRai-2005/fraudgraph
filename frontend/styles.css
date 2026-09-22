@@ -129,7 +129,10 @@
 /* ------------------------------------------------------------------ base */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-html, body { margin: 0; padding: 0; max-width: 100%; overflow-x: hidden; }
+/* clip, not hidden: `hidden` on both html and body makes body a scroll
+   container that never scrolls, and the sticky header then scrolls away with
+   the page. `hidden` stays only as the fallback for browsers without clip. */
+html, body { margin: 0; padding: 0; max-width: 100%; overflow-x: hidden; overflow-x: clip; }
 body {
   background: var(--paper);
   color: var(--ink);
