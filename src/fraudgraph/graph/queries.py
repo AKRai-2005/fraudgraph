@@ -25,8 +25,25 @@ class QuerySpec:
 
     def ref(self, **kwargs) -> str:
         """The human-readable reference string that goes into evidence.ref."""
-        inner = ", ".join(f"{k}={v}" for k, v in kwargs.items() if v is not None)
+        inner = ", ".join(f"{k}={_brief(v)}" for k, v in kwargs.items() if v is not None)
         return f"query:{self.name}({inner})"
+
+
+def _brief(value) -> str:
+    """A scalar prints as itself; a payload is named, not printed.
+
+    write_case takes the whole case as one argument, and its ref once carried
+    a 7,000-character repr of it into the tool log and the live feed. Every
+    ref an answer file cites has scalar arguments only, so those are unchanged.
+    """
+    if isinstance(value, dict):
+        for key in ("graph_case_id", "case_id", "id"):
+            if value.get(key):
+                return str(value[key])
+        return f"<{len(value)} fields>"
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return f"<{len(value)} items>"
+    return str(value)
 
 
 CATALOGUE: dict[str, QuerySpec] = {
