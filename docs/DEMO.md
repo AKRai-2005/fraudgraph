@@ -1,156 +1,185 @@
-# Demo script (3–5 minutes)
+# Demo video script (3–5 minutes)
 
-Run before recording:
+Read the **bold** lines aloud; everything else is stage direction. Timings are
+cumulative and assume a normal speaking pace (~140 words a minute). Target
+finish: **4:20**.
+
+Every figure below is in the build as it stands. If you re-record after
+changing anything, check the numbers still match before you say them.
+
+---
+
+## Before you record
 
 ```bash
-pip install -e .                          # once
-python -m fraudgraph.benchmark.run        # 20 cases, ~10s
-python -m fraudgraph.benchmark.validate   # should print PASSED
+python -m fraudgraph.benchmark.validate   # prints PASSED
 python run_api.py                         # http://127.0.0.1:8077
 ```
 
-Start the Savanna workspace first if you want the graph backend live — it
-suspends itself when idle, and the console will otherwise say, correctly and
-visibly, that it is serving from the local mirror. Either way the demo works;
-the status strip tells the truth about which one answered.
+* **Start the Savanna workspace** ten minutes early. With it running, the
+  status strip says `Graph tigergraph` and the live investigation writes its
+  case back to the graph on camera. Asleep, the console says `local (fallback)`
+  — true, and visibly weaker. Either works; the strip never lies.
+* **Gemini's free tier allows 20 requests a day.** One live investigation uses
+  two. A rehearsal plus a take is four. Check you have room.
+* **The narration wait is unpredictable — 7 to 58 seconds** for the same case.
+  The script turns that into a point rather than dead air (0:55). Trim it in
+  the edit if it runs long.
+* A live re-run marks that case as a working copy in the console. To put the
+  published answers back afterwards, with the workspace running:
+  `python -m fraudgraph.benchmark.run`.
+* Open on the **Overview** tab, browser at 1440px or wider, and have
+  **HHG-014** ready in the case picker.
 
 ---
 
-## 0:00 — The whole argument, in one chart (35s)
+## 0:00 — The argument, in one chart (30s)
 
-The **Overview** opens on it. Do not scroll past it.
+The Overview opens on it. Don't scroll.
 
-> "590,742 card transactions, six months, no fraud label — just a risk score
-> from the bank's model on each alert. This chart is that score along the
-> bottom, and what our agent concluded after investigating it in the graph, up
-> the side. If a score were enough, every point would sit on the diagonal."
+> **"Six months of card payments — 590,742 transactions — and twenty alerts to
+> judge. Along the bottom is the bank model's risk score. Up the side is what
+> our agent concluded after investigating each one in the graph. If the score
+> were enough, every point would sit on the diagonal."**
 
-Point at the counters.
+Point at the lede above the chart.
 
-> "They don't. On 18 of the 20 alerts the graph moves the answer — nine
-> escalated, nine cleared. Two agree. The hard part of this problem isn't
-> spotting anomalies, it's refusing to act on the ones that don't hold up."
+> **"It doesn't. On eighteen of the twenty, graph evidence moved the answer:
+> nine escalated, nine cleared. The hard part of this dataset isn't spotting
+> anomalies — half these alerts are legitimate and most of them look
+> suspicious. It's refusing to act on the ones that don't hold up."**
 
 Point top-left, then bottom-right.
 
-> "That one up there the model scored **0.05**. We closed it as fraud at 0.98.
-> That one on the right it scored **0.87**; we cleared it at 0.02. Both of
-> those are a click away from the evidence."
+> **"The bank scored this one 0.05. We closed it as fraud at 0.98. It scored
+> that one 0.87; we cleared it at 0.02."**
 
-Point at the status strip: graph backend, closed-case count, and
-**Actions: simulated** — nothing here touches a real financial system.
+Point at the status strip.
 
-## 0:35 — Watch it work (45s)
+> **"And every screen says the same thing: actions are simulated. Nothing here
+> touches a real financial system."**
 
-Click the top-left point (**HHG-014**), then **Watch it investigate**.
+## 0:30 — Watch it investigate (55s)
 
-> "This isn't a replay. The agent is running now, and every line is a real
-> step: each graph query with the time it actually took."
+Click the **HHG-014** point on the chart, then **Watch it investigate**.
 
-Let it stream. When `device_neighbors` lands:
+> **"This isn't a replay. The agent is running now, and each line appears as it
+> happens — every graph query with the time it actually took."**
 
-> "There. It pivoted from the transaction to the device that made it, and
-> asked what else that device touched. **28 cards.** That's the moment the
-> case turns — and it's a graph traversal, not a model score."
+Let it stream. When `device_neighbors` appears:
 
-## 1:20 — The evidence behind it
+> **"There's the turn. It pivoted from the transaction to the device that made
+> it, and asked what else that device has touched. Twenty-eight cards."**
 
-**Investigation queue** → open **HHG-014**.
+When the `stop` line appears:
 
-> "An analyst flagged this one by hand. The bank's own model scored the
-> transaction **0.05** — near zero. $74.96, an ordinary online purchase."
+> **"Fraud at 0.98, on three independent signals, and it stops — with the rule
+> that told it to stop."**
 
-Scroll to the facts row.
+The feed then says the LLM is writing. While it does:
 
-> "Our assessment is 0.96. Here's why."
+> **"The last line is the language model writing the summary. The verdict, the
+> probability and the actions were all fixed before it started, and it can't
+> change them. If it invents an id or an amount that isn't in the evidence, the
+> sentence is thrown away and a template is used."**
 
-Scroll to **Evidence**, read the shared-origin claim.
+## 1:25 — The evidence behind the verdict (50s)
 
-> "The agent pivoted from the transaction to its device profile and asked what
-> else that device touched. A Samsung on Chrome for Android, behind an
-> anonymising proxy, marked *New* for every account it appears on — on **28
-> distinct cards** in one month. One profile out of 9,706 in the dataset meets
-> that test."
+The case renders when the run finishes. Scroll to **Evidence**.
 
-Scroll to the **graph**. Let it settle, hover the orange device node.
+> **"An analyst flagged this by hand: a $74.96 online purchase the bank's own
+> model scored 0.05. Every claim here carries the graph query that produced it
+> and the ids it rests on."**
 
-> "That's the ring. The card we were asked about is on the left. Every blue node
-> around the device is a different customer."
+Read the shared-device claim.
 
-Point at the purple nodes.
+> **"One device fingerprint — always behind an anonymising proxy, marked New
+> for every account it appears on — across twenty-eight unrelated cards in a
+> month. One profile out of 9,706 in this dataset meets that test."**
 
-> "And these four are closed investigations from August and September that the
-> bank's own analysts marked 'pattern not matched to a documented typology'.
-> Case memory found them through the same device."
+Scroll to **The graph around the alert**. Hover the orange device node.
 
-## 1:40 — Undocumented means undocumented (30s)
+> **"That's the ring. The card we were asked about is one of these; every other
+> node on the device is a different customer."**
 
-Scroll to the amber **Undocumented pattern** box.
+Point at the case-coloured nodes.
 
-> "The challenge documents five fraud patterns. This is not one of them, so the
-> agent describes it in its own words and says how it found it. There's a second
-> undocumented typology in the data too — sub-threshold structuring — which
-> shows up in case HHG-006."
+> **"And these are closed investigations the bank's own analysts marked as
+> matching no documented typology. Case memory found them through the same
+> device — that's the past informing this decision."**
 
-## 2:10 — Policy, not vibes (60s)
+## 2:15 — Undocumented means undocumented (20s)
 
-Scroll to **Next best action**.
+Scroll to the **Undocumented pattern** box.
 
-> "Initial recommendation on the left, final on the right, and what changed
-> between them. Every action cites the policy rule that produced it. Block card
-> is **L1**. File report is **L2** — and neither has happened."
+> **"The challenge documents five fraud patterns. This is not one of them, so
+> the agent describes it in its own words. There's a second undocumented
+> typology in the data as well — sub-threshold structuring, purchases priced
+> just under an authorisation limit — and it's case HHG-006."**
 
-Scroll to **Approvals & execution**.
+## 2:35 — Policy, and who has to approve (45s)
 
-> "The agent may execute auto actions. L1 and L2 sit here until a human types
-> their name. Approve one —"
+Scroll to **Decision** in the right column.
 
-Type a name, click **Approve**.
+> **"Every action cites the policy rule that produced it. Monitoring is
+> automatic. Blocking the card is L1. Filing the report is L2 — and neither has
+> happened."**
 
-> "— and it's recorded as a *simulated* execution, with what a real integration
-> would have done. The system never claims a card was blocked."
+Type your name in the field, click **Approve** on `BLOCK_CARD`.
 
-## 3:10 — The finding that shaped the design (60s)
+> **"An approval needs a name. It's recorded as a simulated execution, saying
+> what a real integration would have done. The system never claims a card was
+> blocked."**
 
-**Model & policy** tab.
+Scroll to **Suspicious activity report**.
 
-> "We fitted a classifier on the 5,565 closed investigations. ROC AUC 0.96, and
-> completely useless: `bank_risk_score` came out at **minus 5.5**,
-> `device_marked_new` at minus 2.7."
+> **"Where policy requires it, the filing is written to stand on its own — two
+> of the twenty. And the recommendation is allowed to change: four cases asked
+> for more evidence first, and the console shows the actions before and after."**
 
-> "Because the closed cases aren't a sample of alerts — they're a sample of
-> investigations the bank chose to open. All 900 cleared cases are high-scoring
-> model alerts that turned out to be travel, a new phone, or a big intended
-> purchase. The negative class is *enriched* for the exact signals that mean
-> fraud."
+## 3:20 — Does it actually work? (45s)
 
-Point at the firing-rate table.
+Open **Model & policy**.
 
-> "Only 11.8% of confirmed frauds have any detector firing — against 31% of the
-> cleared alerts. Most fraud here has no graph signature at all. So graph
-> evidence isn't the classifier; it's the thing that's decisive when it fires.
-> The model is a trigger prior plus the measured likelihood ratio of whatever
-> actually fired. Every weight on this page has a countable basis."
+> **"We can't claim accuracy on the twenty — the answer key is withheld, and no
+> accuracy figure for them appears anywhere in this project. So we measured on
+> the 5,565 closed investigations that do have outcomes, replaying the agent as
+> if each were a live alert, with everything after the alert clamped off."**
 
-## 4:10 — Close (20s)
+Point at the backtest table.
 
-> "Twenty answer files, validated against the format, every identifier checked
-> to exist in the dataset. 94 tests, including failure modes: kill the database
-> mid-investigation and the case escalates without a verdict rather than
-> guessing."
+> **"Under a neutral prior — nothing on the scale — it caught all nine
+> undocumented-typology frauds in the dataset from graph structure alone, at
+> seven false fraud calls in three hundred of the hardest negatives. At the
+> exam's own operating point: zero."**
 
-```bash
-python -m fraudgraph.benchmark.validate
-python -m pytest -q
-```
+> **"We also fitted a plain classifier on those closed cases. It scored 0.96 and
+> was useless — the bank's risk score came out at minus five and a half. The
+> closed cases aren't a sample of alerts; they're a sample of investigations the
+> bank chose to open, so the negatives are enriched for the exact signals that
+> mean fraud. That's why graph evidence here is decisive when it fires, not a
+> classifier."**
 
-> "A tool failure is never evidence that fraud did or didn't happen."
+## 4:05 — Close (15s)
+
+> **"Twenty answer files, validated against the format, every id checked to
+> exist in the dataset, every case written back into TigerGraph — and the whole
+> catalogue also runs through TigerGraph's MCP server, with identical answers.
+> Three hundred and ten tests, forty-five of them driving this console in a real
+> browser. A tool failure is never evidence that fraud did or didn't happen."**
 
 ---
 
-### Things to avoid saying
+## Things not to say
 
-* Any accuracy figure for the 20 exam cases — we don't have the answer key.
-* "Blocked", "filed", "frozen" in the past tense. Everything is recommended or
-  simulated.
-* Claiming TigerGraph is live unless the status strip says so.
+* **Any accuracy figure for the 20 exam cases.** There is no answer key.
+* **"Blocked", "filed", "frozen" in the past tense.** Everything is recommended
+  or simulated.
+* **That TigerGraph is live** unless the status strip says `tigergraph`.
+* **That the agent found the patterns by itself.** It applies detectors we
+  wrote after reading the closed cases' analyst notes.
+
+## If you need to cut to three minutes
+
+Drop 2:15 (undocumented) and the second half of 3:20 (the classifier finding).
+Keep the chart, the live run, the approval, and the backtest result.
