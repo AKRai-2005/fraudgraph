@@ -1,9 +1,10 @@
 # Demo video script (3–5 minutes)
 
 Read the **bold** lines aloud; everything else is stage direction. The spoken
-lines are 596 words — about **4:15 of speech** at a normal pace — and the
-section budgets add up to **4:50** with the clicks and the live run. Inside the
-five-minute limit, with room to breathe.
+lines are 641 words — **4:35 of speech** at 140 words a minute — and the
+section budgets total **4:50**, which leaves about fifteen seconds for the
+clicks. That is inside the five-minute limit but not loose: if you speak
+slowly, use the three-minute cut at the end rather than overrunning.
 
 Every figure below matches the build as it stands. If you change anything and
 re-record, check the numbers before you say them.
