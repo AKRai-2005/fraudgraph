@@ -84,7 +84,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | 3–5 minute demo video | **to do** — script in `docs/DEMO.md` |
 | Project report | done — content ready; to be set in the Canva format |
 | Deployed console | done — <https://akrai-2005.github.io/fraudgraph/> (static export) |
-| Technical blog post | drafted — `docs/BLOG.md`, needs publishing |
+| Technical blog post | done — <https://dev.to/ashutosh_kumarrai_6335bf/our-fraud-classifier-scored-0963-auc-we-threw-it-away-1cl5> |
 | Social post tagging @TigerGraphDB | drafted — `docs/SOCIAL.md`, needs posting |
 
 ## Note on TigerGraph MCP

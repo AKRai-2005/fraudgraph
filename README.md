@@ -161,6 +161,11 @@ run over the full case pack and give identical answers. The console's
 status strip always shows which backend answered, and the case records in
 `build/case_records/` record it for every graph call.
 
+## Write-up
+
+The technical write-up — what the 0.963 AUC actually measured, the backtest,
+and the number we withdrew: <https://dev.to/ashutosh_kumarrai_6335bf/our-fraud-classifier-scored-0963-auc-we-threw-it-away-1cl5>
+
 ## Deploying it
 
 A static export of the console is published on GitHub Pages:
