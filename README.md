@@ -163,11 +163,13 @@ status strip always shows which backend answered, and the case records in
 
 ## Deploying it
 
-A Hugging Face Space builds `deploy/Dockerfile`, which clones this repository
-and pulls a ~20 MB data bundle at boot from a **private** repo -- the dataset
-is the organisers', and is not republished. Without the bundle the console
-still serves the 20 published answers and says the graph is unavailable.
-Step by step: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+A static export of the console is published on GitHub Pages:
+<https://akrai-2005.github.io/fraudgraph/>. `scripts/export_static.py` freezes
+every GET response to a file and the page reads those instead of a server, so
+the 20 cases, their evidence and graphs, case memory, the model card and the
+backtest are all browsable. Live investigation and approvals need the agent
+running, and the page says so. To run the container version on a host that has
+one, see [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Connecting the LLM
 

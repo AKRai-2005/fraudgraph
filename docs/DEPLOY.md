@@ -1,23 +1,45 @@
 # Deploying the console
 
-The target is a public URL a judge can open, at no cost, without republishing
-the organisers' dataset.
+The target is a public URL a judge can open, at no cost.
 
-**Shape.** A Hugging Face Space builds `deploy/Dockerfile`, which clones this
-repository. At boot, `deploy/boot.py` pulls a ~20 MB data bundle from a
-**private** Hugging Face dataset repo and starts the console on port 7860.
+**What is deployed now: a static export**, on GitHub Pages, from the
+`gh-pages` branch. `scripts/export_static.py` captures every GET the console
+makes -- 52 responses, 0.95 MB -- and the page reads those files instead of a
+server (`window.FG_STATIC`). All 20 cases, their evidence, graphs, detectors,
+policy, case memory, the model card and the backtest are there. Live
+investigation, the stream, approvals and ad-hoc lookup are not: there is no
+agent behind a static file, and the page says so in a banner, in the status
+strip and on every action that would have needed one.
 
-**Why the split.** The console can serve the 20 published answer files with
-nothing behind them, but a live investigation needs the transaction cache —
-and that cache is the challenge dataset in another form. It goes in a private
-repo, not the public image. Without it the console still runs and says the
-graph is unavailable, on every screen.
+```bash
+python scripts/export_static.py --serve 8090     # build it and look at it
+```
 
-**What it costs.** Nothing. Spaces' free CPU tier is 2 vCPU and 16 GB RAM,
-with no card. The console holds about 450 MB once the mirror is loaded, which
-is why the free 512 MB tiers elsewhere are not enough.
+To republish after a change:
+
+```bash
+python scripts/export_static.py
+cd build/static_site && git init -q . && git checkout -q -b gh-pages   && git add -A && git commit -qm "Static export"   && git remote add origin https://github.com/AKRai-2005/fraudgraph.git   && git push -f origin gh-pages
+```
+
+Enable it once at **Settings -> Pages -> Source: Deploy from a branch ->
+`gh-pages` / `(root)`**. The URL is <https://akrai-2005.github.io/fraudgraph/>.
 
 ---
+
+## Why not a container
+
+A running console is better -- it can investigate live -- but the free routes
+have closed. **Hugging Face now requires PRO for Docker Spaces**: creating one
+returns `402 Payment Required`, "Static Spaces are free for everyone, but
+hosting Gradio and Docker Spaces on free cpu-basic requires a PRO
+subscription". Fly.io, Railway and Koyeb want a card. Render's free tier has
+512 MB, and the local mirror alone holds 449 MB.
+
+The container setup below still works and is kept for a host that has one:
+`deploy/Dockerfile` builds it, `deploy/boot.py` pulls the data bundle at boot
+from a private repo. The bundle already exists at
+<https://huggingface.co/datasets/ashunoosh/fraudgraph-data> (private).
 
 ## 1. Build the bundle
 

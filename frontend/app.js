@@ -11,7 +11,23 @@ const pct = (n) => (n == null ? '—' : (Number(n) * 100).toFixed(1) + '%');
 
 const state = { queue: [], current: null, graph: null, sort: { key: 'fraud_probability', dir: -1 } };
 
+/* A static export (scripts/export_static.py) writes every GET response to a
+ * file and sets window.FG_STATIC. The console then reads those files instead
+ * of a server. Nothing can be investigated or approved there, and the parts
+ * that would write say so rather than failing at the fetch. */
+const STATIC = window.FG_STATIC || null;
+const STATIC_NOTE = 'This is a static export of the console: the agent is not '
+  + 'running behind it, so live investigation and approvals are disabled. '
+  + 'Clone the repository and run it locally for those.';
+
 async function api(path, opts) {
+  if (STATIC) {
+    if (opts && opts.method && opts.method !== 'GET') throw new Error(STATIC_NOTE);
+    // '/api/cases/HHG-014/graph' -> 'api/cases/HHG-014/graph.json'
+    const r = await fetch(path.replace(/^\//, '') + '.json');
+    if (!r.ok) throw new Error(`not in this export (${r.status})`);
+    return r.json();
+  }
   const r = await fetch(API + path, Object.assign({ headers: { 'content-type': 'application/json' } }, opts));
   if (!r.ok) {
     let msg = r.statusText;
@@ -103,8 +119,15 @@ async function loadHealth() {
     strip.innerHTML = [
       `<span class="st" title="Every action executes against a mock service. Nothing reaches a real financial system.">`
         + `<span class="dot warn"></span>Actions <b>simulated</b></span>`,
-      `<span class="st" title="${esc(graphTitle)}"><span class="dot ${g.ok ? (tgLive ? 'ok' : 'warn') : 'bad'}"></span>`
-        + `Graph <b>${esc(g.backend || '?')}</b>${g.ok ? (tgLive ? '' : ' (fallback)') : ' (down)'}</span>`,
+      STATIC ? `<span class="st" title="A snapshot of the console. The agent is not running behind it.">`
+        + `<span class="dot warn"></span>Static <b>export</b></span>` : '',
+      STATIC
+        // "(fallback)" would be wrong here: nothing was asked of a graph at
+        // page load. The export names the backend that answered when it ran.
+        ? `<span class="st" title="Every figure on this page was produced by the ${esc(g.backend || '?')} backend when the export was generated.">`
+          + `<span class="dot ok"></span>Graph <b>${esc(g.backend || '?')}</b> snapshot</span>`
+        : `<span class="st" title="${esc(graphTitle)}"><span class="dot ${g.ok ? (tgLive ? 'ok' : 'warn') : 'bad'}"></span>`
+          + `Graph <b>${esc(g.backend || '?')}</b>${g.ok ? (tgLive ? '' : ' (fallback)') : ' (down)'}</span>`,
       `<span class="st" title="${esc(h.llm.enabled ? `Narration by ${h.llm.model}; verdicts never come from it` : 'Narration uses deterministic templates')}">`
         + `LLM <b>${h.llm.enabled ? 'on' : 'off'}</b></span>`,
     ].join('');
@@ -478,7 +501,7 @@ $$('#queueTable th[data-sort]').forEach((th) => th.addEventListener('click', () 
   renderQueue();
 }));
 
-$('#adhocBtn').addEventListener('click', async () => {
+$('#adhocBtn')?.addEventListener('click', async () => {
   const id = $('#adhocTxn').value.trim();
   if (!/^\d+$/.test(id)) { $('#adhocMsg').textContent = 'Enter a numeric TransactionID.'; return; }
   $('#adhocMsg').innerHTML = '<span class="spinner"></span> investigating&hellip;';
@@ -495,7 +518,7 @@ $('#adhocBtn').addEventListener('click', async () => {
 
 /* ============================================================ workspace */
 $('#casePicker').addEventListener('change', (e) => openCase(e.target.value));
-$('#rerunBtn').addEventListener('click', () => rerunQuietly($('#casePicker').value));
+$('#rerunBtn')?.addEventListener('click', () => rerunQuietly($('#casePicker').value));
 
 async function openCase(id) {
   show('case');
@@ -731,6 +754,9 @@ function approvalList(rec) {
       ctl = `<span class="muted">${esc(x.status === 'recommended' ? 'agent may execute' : x.status)}</span>`;
     } else if (done) {
       ctl = `<span class="tag ${done.decision === 'approved' ? 'done-yes' : 'done-no'}">${esc(done.decision)} by ${esc(done.approver)}</span>`;
+    } else if (STATIC) {
+      // no agent behind this page: say what the action is waiting for
+      ctl = `<span class="tag pending">awaiting ${esc(x.route)} approval</span>`;
     } else {
       ctl = `<span class="approve">
           <label class="sr-only" for="appr-${esc(x.action)}">Your name, to approve or reject ${esc(x.action)}</label>
@@ -1181,11 +1207,32 @@ async function loadModel() {
 }
 
 /* ================================================================ boot */
+/* In a static export the controls that would write are removed rather than
+ * left to fail on click, and the page says what it is. Reading -- cases,
+ * evidence, the graph, the backtest -- is unaffected. */
+function applyStaticMode() {
+  if (!STATIC) return;
+  ['#watchBtn', '#rerunBtn', '#adhocBtn', '#adhocTxn'].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.remove();
+  });
+  const adhoc = $('#adhocMsg');
+  if (adhoc) adhoc.textContent = 'Ad-hoc investigation needs the agent running.';
+  const banner = document.createElement('div');
+  banner.className = 'alert';
+  banner.style.margin = '0 0 var(--s4)';
+  banner.innerHTML = `<b>Static export.</b> ${esc(STATIC_NOTE)}`
+    + (STATIC.generated_at ? ` Data frozen ${esc(fmtTime(STATIC.generated_at))}.` : '')
+    + (STATIC.source ? ` <a class="linkish" href="${esc(STATIC.source)}">Source</a>.` : '');
+  $('#main').prepend(banner);
+}
+
 (async function boot() {
+  applyStaticMode();
   await loadHealth();
   await loadQueue();
   await loadOverview();
-  setInterval(loadHealth, 30000);
+  if (!STATIC) setInterval(loadHealth, 30000);
 })();
 
 let _chartResize;
@@ -1339,4 +1386,4 @@ async function rerunQuietly(caseId) {
   } catch (e) { $('#caseMsg').textContent = 'Failed: ' + e.message; }
 }
 
-$('#watchBtn').addEventListener('click', () => watchInvestigation($('#casePicker').value));
+$('#watchBtn')?.addEventListener('click', () => watchInvestigation($('#casePicker').value));
