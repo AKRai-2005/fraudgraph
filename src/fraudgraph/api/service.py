@@ -595,9 +595,29 @@ class CaseService:
         had appended another entry, and the table showed HHG-014 six times.
         So the journal is collapsed to the latest entry per case here, and the
         raw count is reported separately as what it actually is.
+
+        Deployed without the parquet cache -- serving published answers with no
+        dataset behind them -- the historical half simply is not there. It is
+        reported as unavailable, with the reason, rather than 500ing the view.
         """
-        cc = pd.read_parquet(PATHS.closed_cases_parquet)
-        journal = self.memory.read_agent_cases(limit=2000)
+        try:
+            cc = pd.read_parquet(PATHS.closed_cases_parquet)
+            historical = {
+                "available": True,
+                "total": int(len(cc)),
+                "confirmed_fraud": int((cc.outcome == "confirmed_fraud").sum()),
+                "cleared": int((cc.outcome == "cleared").sum()),
+                "by_pattern": cc.pattern.value_counts().to_dict(),
+                "date_range": [str(cc.opened_at.min())[:10], str(cc.closed_at.max())[:10]],
+            }
+        except (FileNotFoundError, OSError) as exc:
+            historical = {"available": False, "reason": str(exc)[:200], "total": 0,
+                          "confirmed_fraud": 0, "cleared": 0, "by_pattern": {},
+                          "date_range": ["", ""]}
+        try:
+            journal = self.memory.read_agent_cases(limit=2000)
+        except (FileNotFoundError, OSError):
+            journal = []
         latest: dict[str, dict] = {}
         for entry in journal:                       # oldest first, so the last wins
             case = entry.get("case", entry)
@@ -607,13 +627,7 @@ class CaseService:
         cases = list(latest.values())
         cases.sort(key=lambda e: str(e.get("at") or ""), reverse=True)
         return {
-            "historical": {
-                "total": int(len(cc)),
-                "confirmed_fraud": int((cc.outcome == "confirmed_fraud").sum()),
-                "cleared": int((cc.outcome == "cleared").sum()),
-                "by_pattern": cc.pattern.value_counts().to_dict(),
-                "date_range": [str(cc.opened_at.min())[:10], str(cc.closed_at.max())[:10]],
-            },
+            "historical": historical,
             "agent_written": {
                 "total": len(cases),
                 "write_attempts_logged": len(journal),

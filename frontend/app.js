@@ -1004,21 +1004,27 @@ async function loadMemory() {
     const m = await api('/api/memory');
     const h = m.historical, ag = m.agent_written;
     const pats = Object.entries(h.by_pattern || {}).sort((a, b) => b[1] - a[1]);
+    // Deployed without the parquet cache there is no history to count. Zeros
+    // would read as "no closed cases"; say it is not loaded instead.
+    const noHistory = h.available === false;
     body.innerHTML = `
       <div class="grid-2">
         <section class="sec">
           <div class="sec-head"><h2>From the dataset</h2>
-            <span class="sec-meta">${esc(h.date_range[0])} to ${esc(h.date_range[1])}</span></div>
+            <span class="sec-meta">${noHistory ? 'not loaded' : `${esc(h.date_range[0])} to ${esc(h.date_range[1])}`}</span></div>
           <p class="sec-note">Read-only ground truth. Retrieved as context for a new alert, never used as its verdict.</p>
-          <dl class="ledger compact fit">
+          ${noHistory ? `<div class="alert"><b>The closed-case history is not loaded here.</b>
+            This deployment serves the published answer files; it does not carry the dataset.
+            The figures below are what the agent wrote, which is unaffected.</div>`
+          : `<dl class="ledger compact fit">
             ${ledgerItem('Closed investigations', h.total.toLocaleString())}
             ${ledgerItem('Confirmed fraud', h.confirmed_fraud.toLocaleString(), '', 'fraud')}
             ${ledgerItem('Cleared', h.cleared.toLocaleString(), '', 'legit')}
-          </dl>
-          <div class="sub"><h3>By pattern</h3>
+          </dl>`}
+          ${noHistory ? '' : `<div class="sub"><h3>By pattern</h3>
             <table><thead><tr><th scope="col">Pattern</th><th scope="col" class="num">Cases</th></tr></thead><tbody>
             ${pats.map(([k, v]) => `<tr><td>${k === 'none' ? '<span class="muted">none (cleared)</span>' : esc(humanise(k))}</td>
-              <td class="num">${v.toLocaleString()}</td></tr>`).join('')}</tbody></table></div>
+              <td class="num">${v.toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`}
         </section>
         <section class="sec">
           <div class="sec-head"><h2>Written by the agent</h2></div>
