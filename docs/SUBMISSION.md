@@ -82,9 +82,10 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | SARs where policy requires | done |
 | Next-best action before and after evidence | done |
 | 3–5 minute demo video | **to do** — script in `docs/DEMO.md` |
-| Project report | **in progress** — to be set in the Canva format |
-| Technical blog post | **to do** — not started |
-| Social post tagging @TigerGraphDB | **to do** — not started |
+| Project report | done — content ready; to be set in the Canva format |
+| Deployed console | done — <https://akrai-2005.github.io/fraudgraph/> (static export) |
+| Technical blog post | drafted — `docs/BLOG.md`, needs publishing |
+| Social post tagging @TigerGraphDB | drafted — `docs/SOCIAL.md`, needs posting |
 
 ## Note on TigerGraph MCP
 
