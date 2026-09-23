@@ -161,6 +161,14 @@ run over the full case pack and give identical answers. The console's
 status strip always shows which backend answered, and the case records in
 `build/case_records/` record it for every graph call.
 
+## Deploying it
+
+A Hugging Face Space builds `deploy/Dockerfile`, which clones this repository
+and pulls a ~20 MB data bundle at boot from a **private** repo -- the dataset
+is the organisers', and is not republished. Without the bundle the console
+still serves the 20 published answers and says the graph is unavailable.
+Step by step: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 ## Connecting the LLM
 
 Gemini's free tier is enough:
