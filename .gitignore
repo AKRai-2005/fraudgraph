@@ -12,3 +12,6 @@ frontend/dist/
 data/raw/*.csv
 !data/raw/case_pack.csv
 !data/raw/README.md
+
+# Claude Code workspace files
+.claude/
