@@ -17,9 +17,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
-# Spaces run as uid 1000; the app directory must belong to it.
-RUN useradd -m -u 1000 user
+# Spaces run as uid 1000. Create and chown the app directory as root first:
+# a WORKDIR that Docker creates can end up owned by root, and then the clone
+# below fails with a permission error that reads like a network problem.
+RUN useradd -m -u 1000 user && mkdir -p /home/user/app && chown -R user:user /home/user
 USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 WORKDIR /home/user/app
 
 ARG REPO=https://github.com/AKRai-2005/fraudgraph.git
