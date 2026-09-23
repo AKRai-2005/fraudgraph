@@ -75,7 +75,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Item | Status |
 |---|---|
 | Working fraud investigation agent | done |
-| GitHub repository | **to do** — `git init` done, needs a remote |
+| GitHub repository | done | <https://github.com/AKRai-2005/fraudgraph> |
 | 20 answer files in `cases/` | done |
 | Complete case records | done (`build/case_records/`) |
 | Cases written to TigerGraph | done — 20/20, `written_to_graph: true` in every answer file |
