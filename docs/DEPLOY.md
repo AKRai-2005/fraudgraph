@@ -19,7 +19,11 @@ To republish after a change:
 
 ```bash
 python scripts/export_static.py
-cd build/static_site && git init -q . && git checkout -q -b gh-pages   && git add -A && git commit -qm "Static export"   && git remote add origin https://github.com/AKRai-2005/fraudgraph.git   && git push -f origin gh-pages
+cd build/static_site
+rm -rf .git && git init -q . && git checkout -q -b gh-pages
+git add -A && git commit -qm "Static export"
+git remote add origin https://github.com/AKRai-2005/fraudgraph.git
+git push -f origin gh-pages
 ```
 
 Enable it once at **Settings -> Pages -> Source: Deploy from a branch ->
