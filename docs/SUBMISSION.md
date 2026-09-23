@@ -81,7 +81,7 @@ and its output inspected. Regenerate the evidence with the commands shown.
 | Cases written to TigerGraph | done — 20/20, `written_to_graph: true` in every answer file |
 | SARs where policy requires | done |
 | Next-best action before and after evidence | done |
-| 3–5 minute demo video | **to do** — script in `docs/DEMO.md` |
+| 3–5 minute demo video | **to record** — package in `demo/` (script, storyboard, cards, 3:51 reference cut) |
 | Project report | done — content ready; to be set in the Canva format |
 | Deployed console | done — <https://akrai-2005.github.io/fraudgraph/> (static export) |
 | Technical blog post | done — <https://dev.to/ashutosh_kumarrai_6335bf/our-fraud-classifier-scored-0963-auc-we-threw-it-away-1cl5> |

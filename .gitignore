@@ -15,3 +15,6 @@ data/raw/*.csv
 
 # Claude Code workspace files
 .claude/
+
+# rendered demo footage (rebuild: scripts/demo_record.py)
+demo/reference/
