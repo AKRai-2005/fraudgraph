@@ -127,6 +127,56 @@ LOWER_THIRDS: dict[str, str] = {
 }
 
 
+# A YouTube thumbnail: 1280x720, readable at 210px wide in a sidebar.
+THUMB_CSS = """
+:root { --paper:#f6f4ee; --ink:#1b1a17; --ink-2:#4d4a43; --ink-3:#66625a;
+        --rule:#dcd7cc; --fraud:#a3261b; --legit:#2c6639; --accent:#274690; }
+* { box-sizing: border-box; margin: 0; }
+body { width: 1280px; height: 720px; background: var(--paper); color: var(--ink);
+       font: 22px/1.4 system-ui, "Segoe UI", sans-serif; padding: 56px 64px;
+       display: flex; flex-direction: column; justify-content: space-between;
+       position: relative; overflow: hidden; }
+.eyebrow { font-size: 21px; letter-spacing: .16em; text-transform: uppercase;
+           color: var(--ink-3); font-weight: 700; }
+.move { display: flex; align-items: baseline; gap: 26px; margin: 10px 0 4px; }
+.move .a { font: 700 110px/1 Charter, Cambria, Georgia, serif; color: var(--ink-3); }
+.move .arrow { font: 700 70px/1 system-ui, sans-serif; color: var(--ink-3); }
+.move .b { font: 700 150px/1 Charter, Cambria, Georgia, serif; color: var(--fraud); }
+.cap { font: 600 27px/1.35 system-ui, sans-serif; color: var(--ink-2); max-width: 20ch; }
+.cap b { color: var(--ink); }
+.foot { font-size: 21px; color: var(--ink-3); display: flex; gap: 22px; align-items: center; }
+.foot .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fraud); }
+svg { position: absolute; right: 28px; top: 78px; width: 564px; height: 564px; opacity: .95; }
+"""
+
+THUMB_BODY = """
+<svg viewBox="0 0 320 320">
+  <g stroke="#b8b1a3" stroke-width="1.2" fill="none">
+    <!-- a device hub fanning out to cards: the shape of the finding -->
+    <path d="M160 160 L60 70 M160 160 L95 40 M160 160 L150 30 M160 160 L215 40
+             M160 160 L275 70 M160 160 L300 135 M160 160 L295 215 M160 160 L250 280
+             M160 160 L175 300 M160 160 L95 285 M160 160 L45 230 M160 160 L30 150
+             M160 160 L55 120 M160 160 L120 45 M160 160 L240 60 M160 160 L285 175"/>
+  </g>
+  <g fill="#274690">
+    <circle cx="60" cy="70" r="11"/><circle cx="95" cy="40" r="11"/><circle cx="150" cy="30" r="11"/>
+    <circle cx="215" cy="40" r="11"/><circle cx="275" cy="70" r="11"/><circle cx="300" cy="135" r="11"/>
+    <circle cx="295" cy="215" r="11"/><circle cx="250" cy="280" r="11"/><circle cx="175" cy="300" r="11"/>
+    <circle cx="95" cy="285" r="11"/><circle cx="45" cy="230" r="11"/><circle cx="30" cy="150" r="11"/>
+    <circle cx="55" cy="120" r="11"/><circle cx="120" cy="45" r="11"/><circle cx="240" cy="60" r="11"/>
+    <circle cx="285" cy="175" r="11"/>
+  </g>
+  <circle cx="160" cy="160" r="26" fill="#9c6a12" stroke="#fffdf8" stroke-width="4"/>
+</svg>
+<div>
+  <p class="eyebrow">TigerGraph &times; Hacker House Goa</p>
+  <div class="move"><span class="a">0.05</span><span class="arrow">&rarr;</span><span class="b">0.98</span></div>
+  <p class="cap">The bank's model missed it.<br><b>One device. 28 cards.</b></p>
+</div>
+<div class="foot"><span class="dot"></span><span>Agentic fraud investigation on a graph</span></div>
+"""
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(OUT))
@@ -145,6 +195,13 @@ def main(argv: list[str] | None = None) -> int:
             page.wait_for_timeout(200)
             page.screenshot(path=str(out / f"{name}.png"))
             made.append(f"{name}.png")
+        page.close()
+
+        page = b.new_page(viewport={"width": 1280, "height": 720})
+        page.set_content(f"<style>{THUMB_CSS}</style>{THUMB_BODY}")
+        page.wait_for_timeout(250)
+        page.screenshot(path=str(out / "00-thumbnail.png"))
+        made.append("00-thumbnail.png")
         page.close()
 
         page = b.new_page(viewport={"width": 1920, "height": 220})
