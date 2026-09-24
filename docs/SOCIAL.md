@@ -3,137 +3,142 @@
 The form asks every team member to post on any platform, tagging
 **@TigerGraphDB** and **@247pmstudio**, and to paste every link.
 
-Check both handles on the platform before posting — they are written here as
-the form gives them, and LinkedIn uses company pages rather than @handles, so
-search for "TigerGraph" and "247 PM Studio" and pick from the mention
-dropdown.
+Check both handles resolve on the platform before posting. LinkedIn uses
+company pages rather than @handles: type `@TigerGraph` and `@247 PM Studio`
+and pick from the dropdown, or the tag is just text.
 
-Fill in the two links before posting:
+Links used below:
 
-* repo — https://github.com/AKRai-2005/fraudgraph
-* console — https://akrai-2005.github.io/fraudgraph/
-* video — *(paste yours)*
+* video — <https://youtu.be/eJTAnfc5e1g>
+* repo — <https://github.com/AKRai-2005/fraudgraph>
+* console — <https://akrai-2005.github.io/fraudgraph/>
+* write-up — <https://dev.to/ashutosh_kumarrai_6335bf/our-fraud-classifier-scored-0963-auc-we-threw-it-away-1cl5>
+
+X counts any link as 23 characters; the counts below are already adjusted and
+all fit 280 without X Premium.
 
 ---
 
-## X / Twitter — team lead
+## X — team lead (274 characters)
 
-> Built an agentic fraud investigator on @TigerGraphDB for the HHGoa task.
+> The bank's model scored this alert 0.05.
 >
-> The bank's model scored one alert 0.05. Two hops through the graph — payment
-> → device → other cards — and that device turns out to be on 28 unrelated
-> cards in a month. One profile out of 9,706 in the dataset.
+> Two hops in the graph — payment → device → other cards — and that device sits
+> on 28 unrelated cards. One profile out of 9,706.
 >
-> Verdict: fraud, 0.98.
+> Our agent: fraud, 0.98.
 >
-> On 20 alerts the graph moved the answer 18 times: 9 escalated, 9 cleared.
-> Half the work is refusing to act on high scores that don't hold up.
->
-> Code + how it's measured 👇
-> https://github.com/AKRai-2005/fraudgraph
-> @247pmstudio
+> Built on @TigerGraphDB for the @247pmstudio HHGoa task:
+> https://youtu.be/eJTAnfc5e1g
 
 ## LinkedIn — team lead
 
 > **A risk score is a reason to look, never a verdict.**
 >
-> That line from the dataset README shaped everything we built for the
-> TigerGraph × Hacker House Goa challenge: an agent that investigates a fraud
-> alert against a knowledge graph of 590,742 transactions and decides what kind
-> of fraud it is, how far it goes, and what the bank should do — with the graph
+> That line from the challenge README shaped everything we built for the
+> TigerGraph × Hacker House Goa task: an agent that investigates a fraud alert
+> against a knowledge graph of 590,742 transactions and works out what kind of
+> fraud it is, how far it goes, and what the bank should do — with the graph
 > query behind every single claim.
 >
-> The most useful result was a failure. We fitted a classifier on 5,565 closed
-> investigations: ROC AUC 0.963, and every coefficient backwards — the bank's
-> own risk score came out at −5.5. Those closed cases aren't a sample of
-> alerts; they're a sample of investigations a bank chose to open, so the
-> "legitimate" class is enriched with exactly the anomaly signals that indicate
-> fraud. Cleared alerts fire a strong detector 31% of the time against 11.8%
-> for confirmed frauds. Graph evidence can't be the classifier — it's the thing
-> that's decisive when it fires.
+> In the demo, an alert the bank's own model scored 0.05. Two hops later —
+> transaction → device profile → other cards — that device turns out to sit on
+> 28 unrelated cards in a month, always behind an anonymising proxy. Exactly
+> one profile out of 9,706 in the dataset meets that test. The agent closes it
+> as fraud at 0.98, cites the policy rule that told it to stop, and then waits:
+> blocking a card needs a named human approver, and every execution is
+> simulated.
 >
-> So we measured that instead. Replaying the agent over closed cases with known
-> outcomes, with everything after each alert clamped off, it caught all nine
-> undocumented-typology frauds in the dataset from graph structure alone, with
-> zero false fraud verdicts on 300 high-scoring legitimate alerts at the exam's
-> operating point.
+> Across the 20 exam alerts, graph evidence moved the verdict away from the
+> bank's score 18 times — 9 escalated, 9 cleared. Half of those alerts are
+> legitimate, so refusing to act is as much of the job as catching anything.
 >
-> We publish no accuracy figure for the 20 exam cases — we don't have the key.
-> We do publish the AUC we had to withdraw after finding a leak in our own
-> backtest.
+> We claim no accuracy on those 20: the answer key is withheld. What we do
+> publish is a replay over 5,565 closed investigations that have outcomes,
+> with every forward-looking window clamped to the moment each alert opened.
 >
-> Built on TigerGraph Savanna, with the query catalogue also running through
-> TigerGraph MCP. Free tiers throughout.
+> 3-minute demo: https://youtu.be/eJTAnfc5e1g
+> Code: https://github.com/AKRai-2005/fraudgraph
 >
-> Repo: https://github.com/AKRai-2005/fraudgraph
-> Console: https://akrai-2005.github.io/fraudgraph/
+> Thanks to @TigerGraph and @247 PM Studio for the task.
 >
-> #TigerGraph #GraphDatabase #FraudDetection #AIAgents
+> #TigerGraph #GraphDatabase #FraudDetection #AIAgents #GSQL
 
 ---
 
-## X / Twitter — member 2
+## X — member 2 (273 characters)
 
-> Our HHGoa submission on @TigerGraphDB: nine closed cases in the dataset are
-> labelled "undocumented". Reading the analyst notes, they're two patterns —
-> a shared-device ring and sub-threshold structuring, purchases priced just
-> under the authorisation limit.
+> Nine closed cases in our HHGoa dataset were labelled only "undocumented".
 >
-> Both are graph traversals, not model features.
+> Reading the analyst notes: two patterns. A shared-device ring, and
+> purchases priced just under the authorisation limit.
 >
-> https://github.com/AKRai-2005/fraudgraph @247pmstudio
+> Both are graph traversals. @TigerGraphDB @247pmstudio
+> https://youtu.be/eJTAnfc5e1g
 
 ## LinkedIn — member 2
 
 > We spent the TigerGraph × Hacker House Goa task building something that
 > refuses to guess.
 >
-> Our agent runs 9 detectors over graph evidence, and every one of them states
-> what it *cannot* rule out. Actions are routed by a written policy: the agent
-> may monitor a card by itself, but blocking one needs a named human approver
-> and filing a regulatory report needs a second level. Nothing reaches a real
-> financial system — every execution is simulated and labelled as such.
+> Nine detectors run on every case, and each one states what it *cannot* rule
+> out. Actions are routed by a written policy: the agent may monitor a card by
+> itself, but blocking one needs a named approver and filing a regulatory
+> report needs a second level. Nothing touches a real financial system — every
+> execution is simulated and labelled as such.
 >
 > The part I'd want a reviewer to look at is the backtest. Replaying an agent
-> over historical cases is easy to get wrong: our first version leaked, because
-> it time-boxed case memory but not transaction windows, and a replayed alert
-> could see cards compromised after its own investigation opened. Fixing it
-> moved one of our numbers from 0.718 to 0.691 — so we withdrew the 0.718 in
-> writing.
+> over historical cases is easy to get wrong, and our first version leaked: it
+> time-boxed case memory but not transaction windows, so a replayed alert could
+> see cards compromised after its own investigation had opened. Fixing it moved
+> one of our numbers from 0.718 to 0.691 — so we withdrew the 0.718 in writing
+> rather than quietly keeping it.
 >
-> Repo: https://github.com/AKRai-2005/fraudgraph
+> Demo: https://youtu.be/eJTAnfc5e1g
+> Code: https://github.com/AKRai-2005/fraudgraph
 >
-> #TigerGraph #GraphAnalytics #FraudDetection
+> Thanks @TigerGraph and @247 PM Studio.
+>
+> #TigerGraph #GraphAnalytics #FraudDetection #MachineLearning
 
 ---
 
-## X / Twitter — member 3
+## X — member 3 (260 characters)
 
-> Built on @TigerGraphDB for HHGoa: one query catalogue, three backends —
-> installed GSQL, TigerGraph MCP, and a local mirror — all answering the same
-> 20 cases.
+> One query catalogue, three backends: installed GSQL, @TigerGraphDB's MCP
+> server, and a local mirror. All 20 cases run through each.
 >
-> They agreed on every verdict while disagreeing on the evidence underneath.
-> Three bugs we'd never have found by checking answers alone.
->
-> https://github.com/AKRai-2005/fraudgraph @247pmstudio
+> They agreed on every verdict — and disagreed on the evidence underneath.
+> Three bugs found. @247pmstudio
+> https://youtu.be/eJTAnfc5e1g
 
 ## LinkedIn — member 3
 
-> Something I learned building our TigerGraph × Hacker House Goa submission:
-> test the evidence, not just the answer.
+> Lesson from our TigerGraph × Hacker House Goa build: test the evidence, not
+> just the answer.
 >
 > We implemented one catalogue of 17 graph queries three times — installed GSQL
 > over pyTigerGraph, the same queries through TigerGraph's MCP server, and a
-> pandas mirror for offline testing — and ran all 20 cases through each. Every
-> verdict matched. The evidence underneath didn't: different quantile
-> conventions, different tie-breaking between equally-scored prior cases, and
-> an unsorted subset of a device ring. Three real bugs, invisible if you only
-> compare conclusions.
+> pandas mirror for offline testing — then ran all 20 challenge cases through
+> each one. Every verdict matched. The evidence underneath didn't: different
+> quantile conventions, different tie-breaking between two equally-scored prior
+> cases, and an unsorted subset of a device ring. Three real bugs that comparing
+> conclusions would never have surfaced.
 >
-> The console that displays all this is covered by 45 browser tests, including
+> The analyst console on top of it is covered by 45 browser tests, including
 > WCAG AA contrast on every piece of text it renders, in both themes.
 >
-> Repo: https://github.com/AKRai-2005/fraudgraph
+> Demo: https://youtu.be/eJTAnfc5e1g
+> Code: https://github.com/AKRai-2005/fraudgraph
 >
-> #TigerGraph #MCP #SoftwareTesting
+> Thanks @TigerGraph and @247 PM Studio for the challenge.
+>
+> #TigerGraph #MCP #SoftwareTesting #GraphDatabase
+
+---
+
+## If you are a team of one
+
+Post the lead's X and LinkedIn versions and paste both links into the form.
+Do not post all three from one account — they read as filler, and the form
+asks for one post per member, not three per person.
