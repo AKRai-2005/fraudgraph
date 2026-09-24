@@ -64,6 +64,55 @@ all fit 280 without X Premium.
 >
 > #TigerGraph #GraphDatabase #FraudDetection #AIAgents #GSQL
 
+## LinkedIn — team lead, long version
+
+*2987 characters of LinkedIn's 3,000. Use this when you want the detail; the short version above when you want it read to the end.*
+
+> A risk score is a reason to look, never a verdict.
+>
+> That line from the challenge README decided everything we built for the TigerGraph x Hacker House Goa task.
+>
+> THE PROBLEM
+> 590,742 card transactions, no fraud labels, 20 alerts to judge. Half the alerts are legitimate and most of those look suspicious: a high score usually means someone is travelling or bought a new phone. So the hard part is not spotting anomalies. It is refusing to act on the ones that do not hold up, and finding the ones the score missed.
+>
+> ONE ALERT, FROM THE DEMO
+> A $74.96 online purchase the bank's model scored 0.05.
+>
+> Two hops in the graph, transaction to device to the other cards that device touched, and it sits on 28 unrelated cards in a month, always behind an anonymising proxy, marked New for every account. One device profile out of 9,706 meets that test.
+>
+> The agent closes it as fraud at 0.98, then stops and waits. Blocking the card is L1. Filing the report is L2. Neither happens without a named human approver, and every execution is simulated.
+>
+> Across the 20 alerts, graph evidence moved the verdict 18 times: 9 escalated, 9 cleared.
+>
+> HOW IT IS BUILT
+> - 17 GSQL queries are the agent's entire tool surface, implemented three times: installed GSQL, TigerGraph's MCP server, and a local mirror. All three answer the same 20 cases.
+> - Verdict, probability, pattern, actions and routes are computed in code. The LLM proposes retrieval and writes prose; a sentence inventing an id or amount is discarded.
+> - Every claim carries the query that produced it and the ids it rests on.
+> - Closed cases are written back into TigerGraph as memory for the next one.
+>
+> THE RESULT THAT SHAPED IT
+> We fitted a classifier on the 5,565 closed investigations. ROC AUC 0.963, and every coefficient backwards: the bank's own risk score came out at -5.52.
+>
+> Those cases are not a sample of alerts. They are investigations a bank chose to open, so the legitimate class is enriched with the very signals that indicate fraud. Cleared alerts fire a strong detector 31% of the time, against 11.8% for confirmed frauds.
+>
+> Graph evidence cannot be the classifier. It is what is decisive when it fires.
+>
+> WHAT WE MEASURED
+> No accuracy figure for the 20 exam cases appears anywhere in our repo. The key is withheld, so any number would be a guess.
+>
+> Instead we replayed it over closed cases that do have outcomes, every forward-looking window clamped to the moment each alert opened. Under a neutral prior it caught all 9 undocumented-typology frauds from graph structure alone, at 7 false fraud calls in 300 of the hardest negatives. At the exam's operating point: zero.
+>
+> We also publish the number we withdrew: our first backtest leaked, and fixing it moved an AUC from 0.718 to 0.691.
+>
+> 310 automated tests. Free tiers throughout.
+>
+> 3-minute demo: https://youtu.be/eJTAnfc5e1g
+> Code: https://github.com/AKRai-2005/fraudgraph
+>
+> Thanks to @TigerGraph and @247 PM Studio for the task.
+>
+> #TigerGraph #GraphDatabase #FraudDetection #AIAgents #GSQL
+
 ---
 
 ## X — member 2 (273 characters)
