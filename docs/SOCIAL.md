@@ -196,13 +196,13 @@ asks for one post per member, not three per person.
 
 ## LinkedIn — after the result (top 25 of 500)
 
-*1951 characters. Posted after the certificate arrived, October 2026.*
+*2043 characters. Posted after the certificate arrived, October 2026.*
 
 > Top 25 of 500 teams at the TigerGraph x Hacker House Goa 2026 Agentic Fraud Investigation challenge.
 >
 > The line on the certificate I keep re-reading: "Your work was read line by line, and it stood out."
 >
-> What we built as team AlgoRhythms: an agent that takes a bank fraud alert and investigates it against a TigerGraph knowledge graph of 590,742 transactions, working out what kind of fraud it is, how far it goes, and what the bank should do next, with the graph query behind every single claim.
+> Built as team AlgoRhythms with Shreejal Dash and Pratiksha Joshi: an agent that takes a bank fraud alert and investigates it against a TigerGraph knowledge graph of 590,742 transactions, working out what kind of fraud it is, how far it goes, and what the bank should do next, with the graph query behind every single claim.
 >
 > The moment that defined the project: an alert the bank's own model scored 0.05. Two hops in the graph, from the transaction to the device that made it to the other cards that device touched, and it sits on 28 unrelated cards in a month, always behind an anonymising proxy. Exactly one device profile out of 9,706 in the dataset meets that test.
 >
@@ -212,7 +212,7 @@ asks for one post per member, not three per person.
 >
 > The part I would defend hardest is not a feature. We published no accuracy figure for the 20 exam cases, because the answer key was withheld and any number would have been a guess. We measured on 5,565 closed investigations that do have outcomes instead. And when we found that our own backtest had leaked, we published the number we had to withdraw.
 >
-> Thank you Devanshu Saxena and the TigerGraph team for a task that rewarded exactly that kind of care, and 247 PM Studio for running it.
+> Shreejal and Pratiksha, this one was a genuine joint effort. Thank you Devanshu Saxena and the TigerGraph team for a task that rewarded exactly that kind of care, and 247 PM Studio for running it.
 >
 > 3-minute demo: https://youtu.be/eJTAnfc5e1g
 > Code: https://github.com/AKRai-2005/fraudgraph
